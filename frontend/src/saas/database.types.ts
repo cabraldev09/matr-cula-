@@ -302,6 +302,81 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          description: string
+          due_at: string
+          efi_charge_id: number | null
+          efi_txid: string | null
+          id: string
+          method: string
+          organization_id: string
+          paid_at: string | null
+          payment_url: string | null
+          period_end: string
+          period_start: string
+          pix_copy_paste: string | null
+          plan_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          description?: string
+          due_at: string
+          efi_charge_id?: number | null
+          efi_txid?: string | null
+          id?: string
+          method: string
+          organization_id: string
+          paid_at?: string | null
+          payment_url?: string | null
+          period_end: string
+          period_start: string
+          pix_copy_paste?: string | null
+          plan_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          description?: string
+          due_at?: string
+          efi_charge_id?: number | null
+          efi_txid?: string | null
+          id?: string
+          method?: string
+          organization_id?: string
+          paid_at?: string | null
+          payment_url?: string | null
+          period_end?: string
+          period_start?: string
+          pix_copy_paste?: string | null
+          plan_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memberships: {
         Row: {
           active: boolean
@@ -404,24 +479,150 @@ export type Database = {
           },
         ]
       }
-      organizations: {
+      modules: {
+        Row: {
+          code: string
+          description: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          description?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          description?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      organization_addons: {
         Row: {
           created_at: string
-          id: string
-          name: string
-          timezone: string
+          expires_at: string | null
+          module: string
+          note: string
+          organization_id: string
         }
         Insert: {
           created_at?: string
-          id?: string
-          name: string
-          timezone?: string
+          expires_at?: string | null
+          module: string
+          note?: string
+          organization_id: string
         }
         Update: {
           created_at?: string
+          expires_at?: string | null
+          module?: string
+          note?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_addons_module_fkey"
+            columns: ["module"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "organization_addons_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          brand_color: string
+          created_at: string
+          email_domain: string | null
+          id: string
+          logo_path: string | null
+          name: string
+          slug: string | null
+          timezone: string
+        }
+        Insert: {
+          brand_color?: string
+          created_at?: string
+          email_domain?: string | null
           id?: string
-          name?: string
+          logo_path?: string | null
+          name: string
+          slug?: string | null
           timezone?: string
+        }
+        Update: {
+          brand_color?: string
+          created_at?: string
+          email_domain?: string | null
+          id?: string
+          logo_path?: string | null
+          name?: string
+          slug?: string | null
+          timezone?: string
+        }
+        Relationships: []
+      }
+      plans: {
+        Row: {
+          active: boolean
+          billing_interval: string
+          code: string
+          created_at: string
+          description: string
+          efi_plan_id: number | null
+          id: string
+          is_public: boolean
+          limits: Json
+          modules: string[]
+          name: string
+          price_cents: number
+          sort_order: number
+          trial_days: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          billing_interval?: string
+          code: string
+          created_at?: string
+          description?: string
+          efi_plan_id?: number | null
+          id?: string
+          is_public?: boolean
+          limits?: Json
+          modules?: string[]
+          name: string
+          price_cents: number
+          sort_order?: number
+          trial_days?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          billing_interval?: string
+          code?: string
+          created_at?: string
+          description?: string
+          efi_plan_id?: number | null
+          id?: string
+          is_public?: boolean
+          limits?: Json
+          modules?: string[]
+          name?: string
+          price_cents?: number
+          sort_order?: number
+          trial_days?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -471,6 +672,73 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string
+          current_period_start: string
+          efi_subscription_id: number | null
+          organization_id: string
+          payment_method: string | null
+          pending_plan_id: string | null
+          plan_id: string
+          status: string
+          trial_used: boolean
+          updated_at: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end: string
+          current_period_start?: string
+          efi_subscription_id?: number | null
+          organization_id: string
+          payment_method?: string | null
+          pending_plan_id?: string | null
+          plan_id: string
+          status: string
+          trial_used?: boolean
+          updated_at?: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end?: string
+          current_period_start?: string
+          efi_subscription_id?: number | null
+          organization_id?: string
+          payment_method?: string | null
+          pending_plan_id?: string | null
+          plan_id?: string
+          status?: string
+          trial_used?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_pending_plan_id_fkey"
+            columns: ["pending_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
             referencedColumns: ["id"]
           },
         ]
@@ -572,6 +840,35 @@ export type Database = {
           },
         ]
       }
+      usage_counters: {
+        Row: {
+          metric: string
+          organization_id: string
+          period_start: string
+          used: number
+        }
+        Insert: {
+          metric: string
+          organization_id: string
+          period_start: string
+          used?: number
+        }
+        Update: {
+          metric?: string
+          organization_id?: string
+          period_start?: string
+          used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_counters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -581,8 +878,13 @@ export type Database = {
         Args: { display_name: string; invite_token: string }
         Returns: string
       }
+      am_platform_admin: { Args: never; Returns: boolean }
       claim_conversation: { Args: { conversation: string }; Returns: undefined }
       close_conversation: { Args: { conversation: string }; Returns: undefined }
+      consume_quota: {
+        Args: { amount?: number; metric: string; org: string }
+        Returns: number
+      }
       create_channel: {
         Args: {
           channel_name: string
@@ -601,6 +903,7 @@ export type Database = {
         Args: { invite_email: string; invite_role: string; org: string }
         Returns: Json
       }
+      my_entitlements: { Args: { org: string }; Returns: Json }
       queue_message: {
         Args: {
           conversation: string
@@ -627,6 +930,10 @@ export type Database = {
           phone: string
         }
         Returns: string
+      }
+      start_trial: {
+        Args: { org: string; plan_code: string }
+        Returns: undefined
       }
     }
     Enums: {

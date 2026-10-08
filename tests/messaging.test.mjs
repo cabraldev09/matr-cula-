@@ -15,6 +15,7 @@ const require = createRequire(
   new URL("../frontend/package.json", import.meta.url)
 );
 const { createClient } = require("@supabase/supabase-js");
+import { activatePlan } from "./helpers/plans.mjs";
 const status = JSON.parse(
   execFileSync("supabase", ["status", "-o", "json"], {
     encoding: "utf8",
@@ -81,6 +82,7 @@ test("Messaging: isolated inbox, persistent outbox, webhook deduplication and sa
       })
     );
     orgs.push(otherOrg);
+    for (const id of [org, otherOrg]) await activatePlan(admin, id);
     const invite = ok(
       await owner.client.rpc("invite_member", {
         org,

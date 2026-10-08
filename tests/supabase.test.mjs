@@ -7,6 +7,7 @@ const require = createRequire(
   new URL("../frontend/package.json", import.meta.url)
 );
 const { createClient } = require("@supabase/supabase-js");
+import { activatePlan } from "./helpers/plans.mjs";
 const status = JSON.parse(
   execFileSync("supabase", ["status", "-o", "json"], {
     encoding: "utf8",
@@ -61,6 +62,7 @@ test("SaaS: isolation, permissions, onboarding and durable records", async (t) =
       })
     );
     organizations.push(orgB);
+    for (const org of [orgA, orgB]) await activatePlan(admin, org);
     const contactA = ok(
       await a.client
         .from("contacts")
