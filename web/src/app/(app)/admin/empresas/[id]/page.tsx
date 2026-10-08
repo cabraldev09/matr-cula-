@@ -57,6 +57,7 @@ export default async function PlatformOrganizationPage({ params }: PageProps<"/a
               organizationId={id}
               plans={(plans ?? []).map((p) => ({ id: p.id, name: p.name }))}
               current={subscription ? { planId: subscription.plan_id, status: subscription.status, periodEnd: String(subscription.current_period_end).slice(0, 10) } : null}
+              suggestedEnd={new Date(new Date().getTime() + 30 * 86_400_000).toISOString().slice(0, 10)}
             />
             <p className="mt-3 text-xs text-muted-foreground">Ajustes manuais não geram cobrança na Efí. Para suspender por abuso ou inadimplência, use a situação “Suspensa”.</p>
           </CardContent>

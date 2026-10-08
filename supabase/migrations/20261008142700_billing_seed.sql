@@ -21,7 +21,7 @@ insert into public.plans(code, name, description, price_cents, modules, limits, 
 on conflict (code) do nothing;
 
 insert into storage.buckets(id, name, public, file_size_limit, allowed_mime_types)
-values ('branding', 'branding', true, 1048576, array['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'])
+values ('branding', 'branding', true, 1048576, array['image/png', 'image/jpeg', 'image/webp'])
 on conflict (id) do nothing;
 -- CASE keeps the uuid cast away from objects of other buckets.
 create function private.storage_org(object_name text) returns uuid

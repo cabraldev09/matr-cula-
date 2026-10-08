@@ -37,13 +37,16 @@ export function SubscriptionForm({
   organizationId,
   plans,
   current,
+  suggestedEnd,
 }: {
   organizationId: string;
   plans: { id: string; name: string }[];
   current: { planId: string; status: string; periodEnd: string } | null;
+  /** Sugestão de validade para quem ainda não tem assinatura (calculada no servidor). */
+  suggestedEnd: string;
 }) {
   const { pending, run } = useAction();
-  const defaultEnd = current?.periodEnd ?? new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+  const defaultEnd = current?.periodEnd ?? suggestedEnd;
   return (
     <form
       action={(form) => run(() => setSubscriptionAction({ organizationId, planId: form.get("planId"), status: form.get("status"), periodEnd: form.get("periodEnd") }))}

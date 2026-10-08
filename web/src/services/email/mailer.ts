@@ -1,4 +1,5 @@
 import "server-only";
+import { BRAND } from "@/lib/brand";
 import nodemailer from "nodemailer";
 import { getEnv } from "@/lib/env";
 import { appUrl } from "@/lib/app-url";
@@ -47,7 +48,7 @@ export interface SendMailInput {
 /** Envia o e-mail e registra o evento na auditoria (sem corpo, sem senha). */
 export async function sendMail(input: SendMailInput): Promise<{ messageId: string }> {
   const env = getEnv();
-  const from = env.EMAIL_FROM ?? `Análise Curricular <${env.EMAIL_USER}>`;
+  const from = env.EMAIL_FROM ?? `${BRAND.name} <${env.EMAIL_USER}>`;
   try {
     const info = await getTransporter().sendMail({
       from,

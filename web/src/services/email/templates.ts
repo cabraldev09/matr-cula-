@@ -91,11 +91,11 @@ export function inviteEmail(p: {
   const first = firstName(p.name);
   return {
     subject:
-      "Sua conta no Sistema de Análise Curricular Inteligente foi criada",
+      `Sua conta no ${BRAND.name} foi criada`,
     html: layout({
       preheader: "Defina sua senha para começar a usar o sistema.",
       title: `Olá, ${first}! Sua conta está pronta.`,
-      intro: `${escape(p.invitedBy)} criou o seu acesso ao <strong>Sistema de Análise Curricular Inteligente</strong> da ${escape(p.institution)}. Para começar, defina a sua senha pessoal clicando no botão abaixo.`,
+      intro: `${escape(p.invitedBy)} criou o seu acesso ao <strong>${escape(BRAND.name)}</strong> da ${escape(p.institution)}. Para começar, defina a sua senha pessoal clicando no botão abaixo.`,
       details: [
         ["Login", p.login],
         ["Validade do link", `${p.validDays} dias`],
@@ -104,7 +104,7 @@ export function inviteEmail(p: {
       note: "Por segurança, o link só pode ser usado uma vez. Depois de definir a senha, entre pelo endereço do sistema com o seu login.",
       institution: p.institution,
     }),
-    text: `Olá, ${first}!\n\n${p.invitedBy} criou o seu acesso ao Sistema de Análise Curricular Inteligente (${p.institution}).\n\nLogin: ${p.login}\nDefina sua senha (link válido por ${p.validDays} dias):\n${p.url}\n\nO link só pode ser usado uma vez. Se você não esperava esta mensagem, ignore-a.`,
+    text: `Olá, ${first}!\n\n${p.invitedBy} criou o seu acesso ao ${BRAND.name} (${p.institution}).\n\nLogin: ${p.login}\nDefina sua senha (link válido por ${p.validDays} dias):\n${p.url}\n\nO link só pode ser usado uma vez. Se você não esperava esta mensagem, ignore-a.`,
   };
 }
 
@@ -117,7 +117,7 @@ export function resetEmail(p: {
 }): EmailContent {
   const first = firstName(p.name);
   return {
-    subject: "Redefinição de senha — Sistema de Análise Curricular Inteligente",
+    subject: `Redefinição de senha — ${BRAND.name}`,
     html: layout({
       preheader: "Use o link para criar uma nova senha.",
       title: `${first}, vamos redefinir sua senha`,
@@ -144,7 +144,7 @@ export function temporaryPasswordEmail(p: {
 }): EmailContent {
   const first = firstName(p.name);
   return {
-    subject: "Senha temporária — Sistema de Análise Curricular Inteligente",
+    subject: `Senha temporária — ${BRAND.name}`,
     html: layout({
       preheader: "Sua senha temporária de acesso.",
       title: `${first}, aqui está sua senha temporária`,

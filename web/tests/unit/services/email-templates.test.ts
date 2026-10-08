@@ -13,7 +13,7 @@ describe("templates de e-mail", () => {
     expect(m.html).toContain("<!doctype html>");
     expect(m.html).toContain("Matrícula+");
     expect(m.html).not.toContain("cid:");
-    expect(m.html).toContain("Sistema de Análise Curricular Inteligente");
+    expect(m.subject).toContain("Matrícula+");
   });
   it("redefinição informa validade em minutos", () => {
     const m = resetEmail({ name: "JOEL SILVA", login: "joel@x", url: "https://app/definir-senha?token=t", validMinutes: 60, institution: "Cruzeiro" });

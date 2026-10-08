@@ -16,7 +16,8 @@ type SubscriptionRow = { organization_id: string; status: string; current_period
 export default async function PlatformOverviewPage() {
   await requirePlatformAdmin();
   const admin = createAdminClient();
-  const monthAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const now = new Date().getTime();
+  const monthAgo = new Date(now - 30 * 86_400_000).toISOString();
   const [{ count: organizations }, { count: newOrganizations }, { data: subscriptions }, { data: paid }] = await Promise.all([
     admin.from("organizations").select("id", { count: "exact", head: true }),
     admin.from("organizations").select("id", { count: "exact", head: true }).gte("created_at", monthAgo),
@@ -29,7 +30,7 @@ export default async function PlatformOverviewPage() {
     .filter((row) => row.status === "active" || row.status === "past_due")
     .reduce((sum, row) => sum + (row.plans ? (row.plans.billing_interval === "year" ? row.plans.price_cents / 12 : row.plans.price_cents) : 0), 0);
   const received = (paid ?? []).reduce((sum, invoice) => sum + invoice.amount_cents, 0);
-  const soon = Date.now() + 3 * 86_400_000;
+  const soon = now + 3 * 86_400_000;
   const attention = rows.filter((row) => row.status === "past_due" || (row.status === "trialing" && new Date(row.current_period_end).getTime() < soon));
 
   const stats = [

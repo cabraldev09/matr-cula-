@@ -14,7 +14,8 @@
     "postinstall": "node scripts/copy-pdf-worker.mjs && prisma generate",
     "prebuild": "node scripts/copy-pdf-worker.mjs",
     "vercel-build": "node scripts/vercel-build.mjs",
-    "platform:admin": "node scripts/grant-platform-admin.mjs"
+    "platform:admin": "node scripts/grant-platform-admin.mjs",
+    "seed:demo": "node scripts/seed-demo.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
