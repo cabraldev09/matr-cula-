@@ -22,6 +22,7 @@ import { isEmailConfigured, sendMail } from "@/services/email/mailer";
 import { inviteEmail, resetEmail } from "@/services/email/templates";
 import { recordAudit } from "@/services/audit-log/audit-log";
 import { lockEnrollment } from "@/services/student-portal/versions";
+import { revokeAuthSessions } from "@/services/auth/sessions";
 
 const createSchema = z.object({
   name: z.string().trim().min(2).max(160),
@@ -275,6 +276,7 @@ export async function studentAccessAction(
         },
       });
     });
+    if (data.action === "BLOCK") await revokeAuthSessions(enrollment.studentUser.authUserId);
     revalidatePath("/academic-analysis/students");
     revalidatePath("/portal");
     if (

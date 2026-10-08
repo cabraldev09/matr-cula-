@@ -4,30 +4,32 @@
  */
 import path from "node:path";
 import { mkdir, readdir, rm, utimes, writeFile } from "node:fs/promises";
-import { config as loadEnv } from "dotenv";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { selectablePdf } from "../fixtures/academic-pdf";
+import { assertLocalDatabase, createTenant, dropTenants, type TestTenant } from "./tenant-fixture";
 
-loadEnv({ path: path.resolve(process.cwd(), ".env"), override: true });
 vi.setConfig({ testTimeout: 30_000 });
 
 let dbOk = false;
 let userId = "";
 let role = "ADMIN";
 let prismaMod: typeof import("@/lib/prisma");
+let tenant: TestTenant | null = null;
 const storageDir = path.resolve(process.cwd(), "storage-test-commercial");
 process.env.STORAGE_DIR = storageDir;
 process.env.STORAGE_DRIVER = "local";
 
-vi.mock("@/lib/session", () => ({ getSessionUser: async () => ({ id: userId, role }) }));
+vi.mock("@/lib/session", () => ({ getSessionUser: async () => ({ id: userId, role, organizationId: tenant?.organizationId, modules: ["analise_curricular", "grades_comerciais"] }) }));
 vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
 
 beforeAll(async () => {
+  if (!assertLocalDatabase()) return;
   try {
     prismaMod = await import("@/lib/prisma");
-    await prismaMod.prisma.$queryRaw`SELECT 1`;
-    const user = await prismaMod.prisma.user.create({ data: { email: `grade-${Date.now()}@test.local`, name: "Teste", passwordHash: "x", role: "ADMIN" } });
-    userId = user.id;
+    await prismaMod.prismaUnscoped.$queryRaw`SELECT 1`;
+    tenant = await createTenant("ADMIN");
+    (globalThis as { __TEST_TENANT__?: string }).__TEST_TENANT__ = tenant.organizationId;
+    userId = tenant.userId;
     dbOk = true;
   } catch {
     dbOk = false;
@@ -35,11 +37,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  if (dbOk) {
-    await prismaMod.prisma.commercialGrade.deleteMany({ where: { uploadedById: userId } });
-    await prismaMod.prisma.user.delete({ where: { id: userId } });
-    await prismaMod.prisma.$disconnect();
-  }
+  if (tenant) await dropTenants([tenant]);
   await rm(storageDir, { recursive: true, force: true });
 });
 
@@ -59,7 +57,7 @@ function upload(bytes: Buffer | string, name = "CST EM ESTÉTICA E COSMÉTICA.PD
   return new Request(url, { method: "POST", body: form });
 }
 
-const storedCount = async () => (await readdir(path.join(storageDir, "commercial-grades")).catch(() => [])).length;
+const storedCount = async () => (await readdir(path.join(storageDir, tenant!.organizationId, "commercial-grades")).catch(() => [])).length;
 
 describe("envio de grade comercial pela API", () => {
   it("lê, guarda o PDF e publica a grade mesmo sem IA configurada (leitura local)", async (ctx) => {
@@ -168,7 +166,7 @@ describe("envio de grade comercial pela API", () => {
   it("localiza e remove apenas arquivos órfãos antigos", async (ctx) => {
     if (!dbOk) return ctx.skip();
     const { findOrphanGradeFiles, removeOrphanGradeFiles } = await import("@/services/commercial-grades/publish");
-    const dir = path.join(storageDir, "commercial-grades");
+    const dir = path.join(storageDir, tenant!.organizationId, "commercial-grades");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "orfao-antigo.pdf"), "x");
     await writeFile(path.join(dir, "orfao-recente.pdf"), "x");
@@ -176,9 +174,10 @@ describe("envio de grade comercial pela API", () => {
     await utimes(path.join(dir, "orfao-antigo.pdf"), old, old);
     // birthtime não é alterável; simula o relógio 1 h à frente para tornar o arquivo "antigo".
     const found = await findOrphanGradeFiles(Date.now() + 60 * 60 * 1000);
-    expect(found).toContain("commercial-grades/orfao-antigo.pdf");
+    expect(found).toContain(`${tenant!.organizationId}/commercial-grades/orfao-antigo.pdf`);
     expect(found.some((key) => !key.includes("orfao"))).toBe(false); // arquivos com grade não são órfãos
-    expect(await findOrphanGradeFiles()).toEqual([]); // recém-criados são preservados
+    // Recém-criados são preservados. (No macOS, utimes também recua a data de criação do arquivo "antigo".)
+    expect(await findOrphanGradeFiles()).not.toContain(`${tenant!.organizationId}/commercial-grades/orfao-recente.pdf`);
     vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + 60 * 60 * 1000 });
     try { expect(await removeOrphanGradeFiles()).toBe(2); } finally { vi.useRealTimers(); }
     expect(await readdir(dir)).not.toContain("orfao-antigo.pdf");

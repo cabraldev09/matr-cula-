@@ -2,21 +2,20 @@
  * Integração: a chave geral "Usar IA" (SystemSetting aiEnabled) bloqueia o cliente OpenAI.
  * Pulado automaticamente se o banco não estiver acessível.
  */
-import path from "node:path";
-import { config as loadEnv } from "dotenv";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
-loadEnv({ path: path.resolve(process.cwd(), ".env"), override: true });
+import { assertLocalDatabase, createTenant, dropTenants, type TestTenant } from "./tenant-fixture";
 
 let dbOk = false;
 let prismaMod: typeof import("@/lib/prisma");
-let previous: unknown = undefined;
+let tenant: TestTenant | null = null;
 
 beforeAll(async () => {
+  if (!assertLocalDatabase()) return;
   try {
     prismaMod = await import("@/lib/prisma");
-    await prismaMod.prisma.$queryRaw`SELECT 1`;
-    previous = (await prismaMod.prisma.systemSetting.findUnique({ where: { key: "aiEnabled" } }))?.value;
+    await prismaMod.prismaUnscoped.$queryRaw`SELECT 1`;
+    tenant = await createTenant();
+    (globalThis as { __TEST_TENANT__?: string }).__TEST_TENANT__ = tenant.organizationId;
     dbOk = true;
   } catch {
     dbOk = false;
@@ -24,11 +23,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  if (!dbOk) return;
-  const { prisma } = prismaMod;
-  if (previous === undefined) await prisma.systemSetting.deleteMany({ where: { key: "aiEnabled" } });
-  else await prisma.systemSetting.update({ where: { key: "aiEnabled" }, data: { value: previous as boolean } });
-  await prisma.$disconnect();
+  if (tenant) await dropTenants([tenant]);
 });
 
 describe("chave geral da IA", () => {

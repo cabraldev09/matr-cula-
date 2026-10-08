@@ -840,7 +840,7 @@ model CommercialGrade {
   createdAt            DateTime @default(now()) @db.Timestamptz(6)
   updatedAt            DateTime @updatedAt @db.Timestamptz(6)
 
-  uploadedBy User @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  uploadedBy User @relation(fields: [uploadedById], references: [id], onDelete: NoAction)
 
   @@unique([organizationId, contentHash])
   @@unique([organizationId, catalogKey])
@@ -878,10 +878,10 @@ model AcademicGridReview {
   updatedAt              DateTime                 @updatedAt @db.Timestamptz(6)
   completedAt            DateTime?                @db.Timestamptz(6)
 
-  createdBy    User                      @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdBy    User                      @relation(fields: [createdById], references: [id], onDelete: NoAction)
   corrections  AcademicGridCorrection[]
   enrollmentId String?                   @db.Uuid
-  enrollment   StudentEnrollment?        @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  enrollment   StudentEnrollment?        @relation(fields: [enrollmentId], references: [id], onDelete: NoAction)
   versions     AcademicAnalysisVersion[]
 
   @@index([enrollmentId])
@@ -911,7 +911,7 @@ model AcademicGridCorrection {
   createdAt       DateTime @default(now()) @db.Timestamptz(6)
 
   review AcademicGridReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  user   User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user   User               @relation(fields: [userId], references: [id], onDelete: NoAction)
 
   @@index([reviewId, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
@@ -938,9 +938,9 @@ model StudentEnrollment {
   createdAt        DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt        DateTime  @updatedAt @db.Timestamptz(6)
 
-  studentUser      User?                     @relation("StudentAccount", fields: [studentUserId], references: [id], onDelete: Restrict)
-  owner            User                      @relation("StudentOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  currentVersion   AcademicAnalysisVersion?  @relation("CurrentAcademicVersion", fields: [currentVersionId], references: [id], onDelete: Restrict)
+  studentUser      User?                     @relation("StudentAccount", fields: [studentUserId], references: [id], onDelete: NoAction)
+  owner            User                      @relation("StudentOwner", fields: [ownerId], references: [id], onDelete: NoAction)
+  currentVersion   AcademicAnalysisVersion?  @relation("CurrentAcademicVersion", fields: [currentVersionId], references: [id], onDelete: NoAction)
   versions         AcademicAnalysisVersion[] @relation("EnrollmentVersions")
   reviews          AcademicGridReview[]
   sources          AcademicAnalysisSource[]
@@ -1003,11 +1003,11 @@ model AcademicAnalysisVersion {
   changeSummary        Json
   createdAt            DateTime                @default(now()) @db.Timestamptz(6)
 
-  enrollment      StudentEnrollment         @relation("EnrollmentVersions", fields: [enrollmentId], references: [id], onDelete: Restrict)
+  enrollment      StudentEnrollment         @relation("EnrollmentVersions", fields: [enrollmentId], references: [id], onDelete: NoAction)
   currentFor      StudentEnrollment?        @relation("CurrentAcademicVersion")
-  review          AcademicGridReview        @relation(fields: [reviewId], references: [id], onDelete: Restrict)
-  actor           User                      @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
-  previousVersion AcademicAnalysisVersion?  @relation("AcademicVersionChain", fields: [previousVersionId], references: [id], onDelete: Restrict)
+  review          AcademicGridReview        @relation(fields: [reviewId], references: [id], onDelete: NoAction)
+  actor           User                      @relation(fields: [actorUserId], references: [id], onDelete: NoAction)
+  previousVersion AcademicAnalysisVersion?  @relation("AcademicVersionChain", fields: [previousVersionId], references: [id], onDelete: NoAction)
   nextVersions    AcademicAnalysisVersion[] @relation("AcademicVersionChain")
   sources         AcademicAnalysisSource[]
 
@@ -1052,9 +1052,9 @@ model AcademicAnalysisSource {
   createdAt             DateTime                  @default(now()) @db.Timestamptz(6)
   updatedAt             DateTime                  @updatedAt @db.Timestamptz(6)
 
-  enrollment StudentEnrollment        @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
-  actor      User                     @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
-  version    AcademicAnalysisVersion? @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  enrollment StudentEnrollment        @relation(fields: [enrollmentId], references: [id], onDelete: NoAction)
+  actor      User                     @relation(fields: [actorUserId], references: [id], onDelete: NoAction)
+  version    AcademicAnalysisVersion? @relation(fields: [versionId], references: [id], onDelete: NoAction)
 
   @@unique([enrollmentId, sourceFileHash])
   @@index([enrollmentId, normalizedContentHash, status])
@@ -1108,7 +1108,7 @@ model AcademicRequest {
   createdAt         DateTime               @default(now()) @db.Timestamptz(6)
   updatedAt         DateTime               @updatedAt @db.Timestamptz(6)
   sourceDocument    AcademicAnalysisSource @relation(fields: [sourceDocumentId], references: [id], onDelete: Cascade)
-  actor             User                   @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  actor             User                   @relation(fields: [actorUserId], references: [id], onDelete: NoAction)
   previousRequest   AcademicRequest?       @relation("RequestAttempts", fields: [previousRequestId], references: [id], onDelete: SetNull)
   nextRequests      AcademicRequest[]      @relation("RequestAttempts")
 

@@ -963,28 +963,28 @@ ALTER TABLE "curricular"."RuleSetVersion" ADD CONSTRAINT "RuleSetVersion_created
 ALTER TABLE "curricular"."SystemRule" ADD CONSTRAINT "SystemRule_ruleSetVersionId_fkey" FOREIGN KEY ("ruleSetVersionId") REFERENCES "curricular"."RuleSetVersion"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."CommercialGrade" ADD CONSTRAINT "CommercialGrade_uploadedById_fkey" FOREIGN KEY ("uploadedById") REFERENCES "curricular"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."CommercialGrade" ADD CONSTRAINT "CommercialGrade_uploadedById_fkey" FOREIGN KEY ("uploadedById") REFERENCES "curricular"."User"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."AcademicGridReview" ADD CONSTRAINT "AcademicGridReview_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "curricular"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."AcademicGridReview" ADD CONSTRAINT "AcademicGridReview_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "curricular"."User"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."AcademicGridReview" ADD CONSTRAINT "AcademicGridReview_enrollmentId_fkey" FOREIGN KEY ("enrollmentId") REFERENCES "curricular"."StudentEnrollment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."AcademicGridReview" ADD CONSTRAINT "AcademicGridReview_enrollmentId_fkey" FOREIGN KEY ("enrollmentId") REFERENCES "curricular"."StudentEnrollment"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "curricular"."AcademicGridCorrection" ADD CONSTRAINT "AcademicGridCorrection_reviewId_fkey" FOREIGN KEY ("reviewId") REFERENCES "curricular"."AcademicGridReview"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."AcademicGridCorrection" ADD CONSTRAINT "AcademicGridCorrection_userId_fkey" FOREIGN KEY ("userId") REFERENCES "curricular"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."AcademicGridCorrection" ADD CONSTRAINT "AcademicGridCorrection_userId_fkey" FOREIGN KEY ("userId") REFERENCES "curricular"."User"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."StudentEnrollment" ADD CONSTRAINT "StudentEnrollment_studentUserId_fkey" FOREIGN KEY ("studentUserId") REFERENCES "curricular"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."StudentEnrollment" ADD CONSTRAINT "StudentEnrollment_studentUserId_fkey" FOREIGN KEY ("studentUserId") REFERENCES "curricular"."User"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."StudentEnrollment" ADD CONSTRAINT "StudentEnrollment_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "curricular"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."StudentEnrollment" ADD CONSTRAINT "StudentEnrollment_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "curricular"."User"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."StudentEnrollment" ADD CONSTRAINT "StudentEnrollment_currentVersionId_fkey" FOREIGN KEY ("currentVersionId") REFERENCES "curricular"."AcademicAnalysisVersion"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."StudentEnrollment" ADD CONSTRAINT "StudentEnrollment_currentVersionId_fkey" FOREIGN KEY ("currentVersionId") REFERENCES "curricular"."AcademicAnalysisVersion"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "curricular"."StudentDeletionRequest" ADD CONSTRAINT "StudentDeletionRequest_enrollmentId_fkey" FOREIGN KEY ("enrollmentId") REFERENCES "curricular"."StudentEnrollment"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -999,31 +999,31 @@ ALTER TABLE "curricular"."StudentDeletionRequest" ADD CONSTRAINT "StudentDeletio
 ALTER TABLE "curricular"."AcademicAnalysisVersion" ADD CONSTRAINT "AcademicAnalysisVersion_preferredSourceId_fkey" FOREIGN KEY ("preferredSourceId") REFERENCES "curricular"."AcademicAnalysisSource"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."AcademicAnalysisVersion" ADD CONSTRAINT "AcademicAnalysisVersion_enrollmentId_fkey" FOREIGN KEY ("enrollmentId") REFERENCES "curricular"."StudentEnrollment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."AcademicAnalysisVersion" ADD CONSTRAINT "AcademicAnalysisVersion_enrollmentId_fkey" FOREIGN KEY ("enrollmentId") REFERENCES "curricular"."StudentEnrollment"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."AcademicAnalysisVersion" ADD CONSTRAINT "AcademicAnalysisVersion_reviewId_fkey" FOREIGN KEY ("reviewId") REFERENCES "curricular"."AcademicGridReview"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."AcademicAnalysisVersion" ADD CONSTRAINT "AcademicAnalysisVersion_reviewId_fkey" FOREIGN KEY ("reviewId") REFERENCES "curricular"."AcademicGridReview"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."AcademicAnalysisVersion" ADD CONSTRAINT "AcademicAnalysisVersion_actorUserId_fkey" FOREIGN KEY ("actorUserId") REFERENCES "curricular"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."AcademicAnalysisVersion" ADD CONSTRAINT "AcademicAnalysisVersion_actorUserId_fkey" FOREIGN KEY ("actorUserId") REFERENCES "curricular"."User"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."AcademicAnalysisVersion" ADD CONSTRAINT "AcademicAnalysisVersion_previousVersionId_fkey" FOREIGN KEY ("previousVersionId") REFERENCES "curricular"."AcademicAnalysisVersion"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."AcademicAnalysisVersion" ADD CONSTRAINT "AcademicAnalysisVersion_previousVersionId_fkey" FOREIGN KEY ("previousVersionId") REFERENCES "curricular"."AcademicAnalysisVersion"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."AcademicAnalysisSource" ADD CONSTRAINT "AcademicAnalysisSource_enrollmentId_fkey" FOREIGN KEY ("enrollmentId") REFERENCES "curricular"."StudentEnrollment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."AcademicAnalysisSource" ADD CONSTRAINT "AcademicAnalysisSource_enrollmentId_fkey" FOREIGN KEY ("enrollmentId") REFERENCES "curricular"."StudentEnrollment"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."AcademicAnalysisSource" ADD CONSTRAINT "AcademicAnalysisSource_actorUserId_fkey" FOREIGN KEY ("actorUserId") REFERENCES "curricular"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."AcademicAnalysisSource" ADD CONSTRAINT "AcademicAnalysisSource_actorUserId_fkey" FOREIGN KEY ("actorUserId") REFERENCES "curricular"."User"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."AcademicAnalysisSource" ADD CONSTRAINT "AcademicAnalysisSource_versionId_fkey" FOREIGN KEY ("versionId") REFERENCES "curricular"."AcademicAnalysisVersion"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."AcademicAnalysisSource" ADD CONSTRAINT "AcademicAnalysisSource_versionId_fkey" FOREIGN KEY ("versionId") REFERENCES "curricular"."AcademicAnalysisVersion"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "curricular"."AcademicRequest" ADD CONSTRAINT "AcademicRequest_sourceDocumentId_fkey" FOREIGN KEY ("sourceDocumentId") REFERENCES "curricular"."AcademicAnalysisSource"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "curricular"."AcademicRequest" ADD CONSTRAINT "AcademicRequest_actorUserId_fkey" FOREIGN KEY ("actorUserId") REFERENCES "curricular"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "curricular"."AcademicRequest" ADD CONSTRAINT "AcademicRequest_actorUserId_fkey" FOREIGN KEY ("actorUserId") REFERENCES "curricular"."User"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "curricular"."AcademicRequest" ADD CONSTRAINT "AcademicRequest_previousRequestId_fkey" FOREIGN KEY ("previousRequestId") REFERENCES "curricular"."AcademicRequest"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -1178,6 +1178,13 @@ for each row execute function private.curricular_tenant_guard('AcademicAnalysisS
 alter table curricular."AcademicRequest" add constraint "AcademicRequest_organization_fkey" foreign key ("organizationId") references public.organizations(id) on delete cascade;
 alter table curricular."AcademicRequest" enable row level security;
 alter table curricular."User" add constraint "User_authUser_fkey" foreign key ("authUserId") references auth.users(id) on delete cascade;
+
+-- Regras que o Prisma não expressa (herdadas do sistema de análise curricular).
+-- Só uma atualização em processamento por matrícula, mesmo com várias instâncias do app.
+create unique index "AcademicAnalysisSource_one_processing" on curricular."AcademicAnalysisSource" ("enrollmentId") where status = 'PROCESSING';
+alter table curricular."AcademicAnalysisSource" add constraint "AcademicAnalysisSource_status_check" check (status in ('PROCESSING', 'COMPLETED', 'FAILED'));
+alter table curricular."AcademicAnalysisVersion" add constraint "AcademicAnalysisVersion_positive_version" check (version > 0);
+alter table curricular."AcademicRequest" add constraint "AcademicRequest_attempt_positive" check (attempt > 0);
 create index "User_authUserId_idx" on curricular."User"("authUserId");
 
 -- Not exposed through the Data API: no policies, no privileges for API roles.

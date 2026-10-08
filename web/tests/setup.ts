@@ -13,3 +13,4 @@ process.env.CRON_SECRET ??= "test-cron-secret-123456";
 
 // "server-only" é um marcador do Next; em testes é um módulo vazio.
 vi.mock("server-only", () => ({}));
+

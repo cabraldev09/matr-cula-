@@ -1,21 +1,37 @@
-import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { config as loadEnv } from "dotenv";
 import { beforeAll, afterAll, describe, it, expect, vi } from "vitest";
 import type { SessionUser } from "@/lib/session";
 import { academicPdf, academicHistoryPdf, selectablePdf } from "../fixtures/academic-pdf";
+import { assertLocalDatabase, createTenant, dropTenants, type TestTenant } from "./tenant-fixture";
 
-loadEnv({
-  path: path.resolve(process.cwd(), ".env"),
-  override: true,
-  quiet: true,
-});
 const session = vi.hoisted(() => ({
-  user: null as Record<string, unknown> | null,
+  user: null as SessionUser | null,
 }));
-vi.mock("@/lib/auth", () => ({
-  auth: async () => (session.user ? { user: session.user } : null),
-}));
+// Sessão simulada com as mesmas regras de lib/session: aluno só com allowStudent e perfil ativo.
+vi.mock("@/lib/session", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/session")>();
+  const { can } = await import("@/lib/rbac");
+  const current = async (allowStudent: boolean) => {
+    const user = session.user;
+    if (!user) return null;
+    // Importado sob demanda: importar o Prisma na fábrica do mock faria o cliente com escopo enxergar a sessão real.
+    const { prismaUnscoped } = await import("@/lib/prisma");
+    const row = await prismaUnscoped.user.findUnique({ where: { id: user.id } });
+    if (!row?.isActive) return null;
+    if (user.role === "STUDENT" && !allowStudent) return null;
+    return user;
+  };
+  return {
+    ...actual,
+    getSessionUser: async (options: { allowStudent?: boolean } = {}) => current(Boolean(options.allowStudent)),
+    requirePermission: async (permission: Parameters<typeof can>[1]) => {
+      const user = await current(false);
+      if (!user) throw new actual.UnauthorizedError();
+      if (!can(user.role, permission)) throw new actual.ForbiddenError();
+      return user;
+    },
+  };
+});
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/services/student-portal/notifications", () => ({
@@ -23,10 +39,11 @@ vi.mock("@/services/student-portal/notifications", () => ({
 }));
 vi.mock("@/services/email/mailer", () => ({
   isEmailConfigured: () => false,
-  appUrl: (value: string) => `http://localhost:3000${value}`,
+  appUrl: (value: string) => `http://localhost:3010${value}`,
   sendMail: vi.fn(),
 }));
 let prisma: (typeof import("@/lib/prisma"))["prisma"];
+let tenant: TestTenant;
 let tutor: SessionUser;
 let otherTutor: SessionUser;
 let student: SessionUser;
@@ -35,34 +52,35 @@ const enrollments: string[] = [];
 const reviewIds: string[] = [];
 let enrollmentId: string;
 const rgm = `9${Date.now()}`;
-const asSession = (user: SessionUser, version = 0) => {
-  session.user = { ...user, sessionVersion: version };
+const asSession = (user: SessionUser) => {
+  session.user = user;
 };
 
 beforeAll(async () => {
-  if (
-    !/localhost|127\.0\.0\.1/.test(new URL(process.env.DATABASE_URL!).hostname)
-  )
-    throw new Error("Portal integration tests require a local database.");
+  if (!assertLocalDatabase()) throw new Error("Portal integration tests require the local Supabase database.");
+  process.env.STORAGE_DRIVER = "local";
+  process.env.STORAGE_DIR = (await import("node:fs")).mkdtempSync((await import("node:path")).join((await import("node:os")).tmpdir(), "portal-storage-"));
   prisma = (await import("@/lib/prisma")).prisma;
-  await prisma.$queryRaw`SELECT 1`;
+  tenant = await createTenant("TUTOR");
+  (globalThis as { __TEST_TENANT__?: string }).__TEST_TENANT__ = tenant.organizationId;
+  const { createAdminClient } = await import("@/lib/supabase/server");
   const make = async (role: "TUTOR" | "STUDENT") => {
+    const email = `portal-test-${randomUUID()}@example.test`;
+    const { data } = await createAdminClient().auth.admin.createUser({ email, password: `P-${randomUUID()}!`, email_confirm: true });
     const user = await prisma.user.create({
-      data: {
-        role,
-        email: `portal-test-${randomUUID()}@example.test`,
-        name: "Aluno Teste Portal",
-        passwordHash: "unused",
-      },
+      data: { role, email, name: "Aluno Teste Portal", authUserId: data.user!.id },
     });
     users.push(user.id);
     return {
       id: user.id,
+      authUserId: user.authUserId,
       name: user.name,
       email: user.email,
       role,
-      mustChangePassword: false,
-      impersonator: null,
+      organizationId: tenant.organizationId,
+      organizationName: "Empresa de teste",
+      memberRole: role === "STUDENT" ? null : "agent",
+      modules: ["analise_curricular", "portal_aluno"],
     } satisfies SessionUser;
   };
   tutor = await make("TUTOR");
@@ -81,42 +99,12 @@ beforeAll(async () => {
   enrollmentId = enrollment.id;
 }, 20000);
 afterAll(async () => {
-  if (!prisma) return;
-  const sources = await prisma.academicAnalysisSource.findMany({
-    where: { enrollmentId: { in: enrollments } },
-    select: { storageKey: true },
-  });
-  const storage = (await import("@/services/storage/storage")).getStorage();
-  for (const source of sources)
-    if (source.storageKey) await storage.delete(source.storageKey);
-  await prisma.studentEnrollment.updateMany({
-    where: { id: { in: enrollments } },
-    data: { currentVersionId: null },
-  });
-  await prisma.academicAnalysisSource.deleteMany({
-    where: { enrollmentId: { in: enrollments } },
-  });
-  await prisma.academicAnalysisVersion.updateMany({
-    where: { enrollmentId: { in: enrollments } },
-    data: { previousVersionId: null },
-  });
-  await prisma.academicAnalysisVersion.deleteMany({
-    where: { enrollmentId: { in: enrollments } },
-  });
-  await prisma.academicGridReview.deleteMany({
-    where: {
-      OR: [{ enrollmentId: { in: enrollments } }, { id: { in: reviewIds } }],
-    },
-  });
-  await prisma.studentEnrollment.deleteMany({
-    where: { id: { in: enrollments } },
-  });
-  await prisma.auditLog.deleteMany({
-    where: {
-      OR: [{ userId: { in: users } }, { entityId: { in: enrollments } }],
-    },
-  });
-  await prisma.user.deleteMany({ where: { id: { in: users } } });
+  if (!tenant) return;
+  const { prismaUnscoped } = await import("@/lib/prisma");
+  const { createAdminClient } = await import("@/lib/supabase/server");
+  const accounts = await prismaUnscoped.user.findMany({ where: { organizationId: tenant.organizationId }, select: { authUserId: true } });
+  await dropTenants([tenant]);
+  for (const account of accounts) await createAdminClient().auth.admin.deleteUser(account.authUserId).catch(() => undefined);
 }, 20000);
 
 describe("Portal Acadêmico — banco real", () => {
@@ -314,41 +302,36 @@ describe("Portal Acadêmico — banco real", () => {
       await prisma.academicAnalysisVersion.count({ where: { enrollmentId } }),
     ).toBe(count);
   });
-  it("bloqueio é imediato, reativação não revive sessões antigas e o histórico permanece", async () => {
+  it("bloqueio é imediato, encerra as sessões do Supabase e o histórico permanece", async () => {
     const { studentAccessAction } =
       await import("@/features/student-portal/actions");
     const { getSessionUser } = await import("@/lib/session");
+    const { createClient } = await import("@supabase/supabase-js");
+    const { createAdminClient } = await import("@/lib/supabase/server");
+    const { prismaUnscoped } = await import("@/lib/prisma");
+    // Uma sessão real do aluno no Supabase Auth.
+    const password = `S-${randomUUID()}!`;
+    await createAdminClient().auth.admin.updateUserById(student.authUserId, { password });
+    const browser = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false } });
+    expect((await browser.auth.signInWithPassword({ email: student.email, password })).error).toBeNull();
+    const sessions = () => prismaUnscoped.$queryRaw<{ count: bigint }[]>`select count(*) from auth.sessions where user_id = ${student.authUserId}::uuid`.then((r) => Number(r[0]!.count));
+    expect(await sessions()).toBeGreaterThan(0);
     asSession(tutor);
-    expect(
-      (
-        await studentAccessAction({
-          enrollmentId,
-          action: "BLOCK",
-          confirmed: true,
-        })
-      ).ok,
-    ).toBe(true);
+    expect((await studentAccessAction({ enrollmentId, action: "BLOCK", confirmed: true })).ok).toBe(true);
+    expect(await sessions()).toBe(0);
     asSession(student);
     expect(await getSessionUser({ allowStudent: true })).toBeNull();
     asSession(tutor);
-    expect(
-      (
-        await studentAccessAction({
-          enrollmentId,
-          action: "ACTIVATE",
-          confirmed: true,
-        })
-      ).ok,
-    ).toBe(true);
+    expect((await studentAccessAction({ enrollmentId, action: "ACTIVATE", confirmed: true })).ok).toBe(true);
+    // A sessão antiga foi revogada: o refresh token não volta a valer com a reativação.
+    expect((await browser.auth.refreshSession()).error).not.toBeNull();
     asSession(student);
-    expect(await getSessionUser({ allowStudent: true })).toBeNull();
-    asSession(student, 2);
     expect((await getSessionUser({ allowStudent: true }))?.id).toBe(student.id);
     expect(
       await prisma.academicAnalysisVersion.count({ where: { enrollmentId } }),
     ).toBe(3);
   });
-  it("convite sem SMTP gera link temporário, senha não recuperável e token de uso único", async () => {
+  it("convite sem SMTP gera link de uso único do Supabase e conta de aluno na empresa", async () => {
     const { createStudentAction } =
       await import("@/features/student-portal/actions");
     asSession(tutor);
@@ -368,24 +351,17 @@ describe("Portal Acadêmico — banco real", () => {
     });
     users.push(enrollment.studentUserId!);
     expect(enrollment.studentUser?.role).toBe("STUDENT");
-    expect(enrollment.studentUser?.initialPasswordEncrypted).toBeNull();
-    expect(enrollment.studentUser?.mustChangePassword).toBe(true);
-    const token = new URL(result.data.link!).searchParams.get("token")!;
-    const { consumePasswordToken } =
-      await import("@/features/users/password-tokens");
-    expect((await consumePasswordToken(token, "NovaSenhaSegura123!")).ok).toBe(
-      true,
-    );
-    expect((await consumePasswordToken(token, "OutraSenhaSegura123!")).ok).toBe(
-      false,
-    );
-    expect(
-      (
-        await prisma.user.findUniqueOrThrow({
-          where: { id: enrollment.studentUserId! },
-        })
-      ).mustChangePassword,
-    ).toBe(false);
+    expect(enrollment.studentUser?.organizationId).toBe(tenant.organizationId);
+    const link = new URL(result.data.link!);
+    expect(link.pathname).toBe("/auth/confirm");
+    expect(link.searchParams.get("type")).toBe("invite");
+    expect(link.searchParams.get("org")).toBe(tenant.organizationId);
+    // O token vale uma vez: a primeira verificação abre a sessão, a segunda é recusada.
+    const { createClient } = await import("@supabase/supabase-js");
+    const verifier = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false } });
+    const tokenHash = link.searchParams.get("token_hash")!;
+    expect((await verifier.auth.verifyOtp({ type: "invite", token_hash: tokenHash })).error).toBeNull();
+    expect((await verifier.auth.verifyOtp({ type: "invite", token_hash: tokenHash })).error).not.toBeNull();
     const duplicate = await createStudentAction({
       name: "Nova Aluna",
       rgm: newRgm,
@@ -451,12 +427,12 @@ describe("Portal Acadêmico — banco real", () => {
     const source = await prisma.academicAnalysisSource.findFirstOrThrow({
       where: { enrollmentId, storageKey: { not: null } },
     });
-    asSession(student, 2);
+    asSession(student);
     expect(
       (
         await statusRoute.GET(
           new Request(
-            `http://localhost:3000/api/portal/status?enrollmentId=${enrollmentId}`,
+            `http://localhost:3010/api/portal/status?enrollmentId=${enrollmentId}`,
           ),
         )
       ).status,
@@ -465,7 +441,7 @@ describe("Portal Acadêmico — banco real", () => {
       (
         await statusRoute.GET(
           new Request(
-            `http://localhost:3000/api/portal/status?enrollmentId=${randomUUID()}`,
+            `http://localhost:3010/api/portal/status?enrollmentId=${randomUUID()}`,
           ),
         )
       ).status,
@@ -480,7 +456,7 @@ describe("Portal Acadêmico — banco real", () => {
     expect(
       (
         await internalUpload.POST(
-          new Request("http://localhost:3000/api/academic-analysis/upload", {
+          new Request("http://localhost:3010/api/academic-analysis/upload", {
             method: "POST",
           }),
         )
@@ -498,7 +474,7 @@ describe("Portal Acadêmico — banco real", () => {
       (
         await statusRoute.GET(
           new Request(
-            `http://localhost:3000/api/portal/status?enrollmentId=${enrollmentId}`,
+            `http://localhost:3010/api/portal/status?enrollmentId=${enrollmentId}`,
           ),
         )
       ).status,
@@ -565,19 +541,20 @@ describe("Portal Acadêmico — banco real", () => {
   });
 
   it("rejeita múltiplos PDFs em qualquer campo multipart para aluno, tutor e admin", async () => {
-    const adminUser = await prisma.user.create({ data: { role: "ADMIN", email: `academic-admin-${randomUUID()}@example.test`, name: "Admin Teste", passwordHash: "unused" } });
+    const adminEmail = `academic-admin-${randomUUID()}@example.test`;
+    const { data: adminAuth } = await (await import("@/lib/supabase/server")).createAdminClient().auth.admin.createUser({ email: adminEmail, password: `A-${randomUUID()}!`, email_confirm: true });
+    const adminUser = await prisma.user.create({ data: { role: "ADMIN", email: adminEmail, name: "Admin Teste", authUserId: adminAuth.user!.id } });
     users.push(adminUser.id);
     const admin = { ...tutor, id: adminUser.id, role: "ADMIN" as const, email: adminUser.email };
     const { handleAcademicUpload } = await import("@/services/student-portal/upload-handler");
     for (const actor of [student, tutor, admin]) {
-      const account = await prisma.user.findUniqueOrThrow({ where: { id: actor.id } });
-      asSession(actor, account.sessionVersion);
+      asSession(actor);
       for (const secondKey of ["file", "complementaryDocument"]) {
         const form = new FormData();
         form.append("file", new File([academicPdf(rgm)], "a.pdf", { type: "application/pdf" }));
         form.append(secondKey, new File([academicPdf(rgm)], "b.pdf", { type: "application/pdf" }));
         form.set("enrollmentId", enrollmentId); form.set("confirmUpdatedTranscript", "true");
-        const response = await handleAcademicUpload(new Request("http://localhost:3000/api/portal/upload", { method: "POST", body: form }));
+        const response = await handleAcademicUpload(new Request("http://localhost:3010/api/portal/upload", { method: "POST", body: form }));
         expect(response.status).toBe(422);
         expect((await response.json()).error).toContain("apenas 1");
       }

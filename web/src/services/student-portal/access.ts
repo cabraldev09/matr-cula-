@@ -21,6 +21,7 @@ export async function requireEnrollment(user: SessionUser, id?: string) {
       studentUser: {
         select: {
           id: true,
+          authUserId: true,
           email: true,
           isActive: true,
           lastLoginAt: true,

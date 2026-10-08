@@ -92,6 +92,13 @@ ${tables}
 ${guard}
 ${perTable.join("\n")}
 alter table curricular."User" add constraint "User_authUser_fkey" foreign key ("authUserId") references auth.users(id) on delete cascade;
+
+-- Regras que o Prisma não expressa (herdadas do sistema de análise curricular).
+-- Só uma atualização em processamento por matrícula, mesmo com várias instâncias do app.
+create unique index "AcademicAnalysisSource_one_processing" on curricular."AcademicAnalysisSource" ("enrollmentId") where status = 'PROCESSING';
+alter table curricular."AcademicAnalysisSource" add constraint "AcademicAnalysisSource_status_check" check (status in ('PROCESSING', 'COMPLETED', 'FAILED'));
+alter table curricular."AcademicAnalysisVersion" add constraint "AcademicAnalysisVersion_positive_version" check (version > 0);
+alter table curricular."AcademicRequest" add constraint "AcademicRequest_attempt_positive" check (attempt > 0);
 create index "User_authUserId_idx" on curricular."User"("authUserId");
 
 -- Not exposed through the Data API: no policies, no privileges for API roles.

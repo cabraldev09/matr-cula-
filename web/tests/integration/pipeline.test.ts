@@ -6,10 +6,10 @@ import { randomUUID } from "node:crypto";
 import { readFileSync, mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { config as loadEnv } from "dotenv";
 import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
+import { assertLocalDatabase, createTenant, dropTenants, type TestTenant } from "./tenant-fixture";
 
-loadEnv({ path: path.resolve(process.cwd(), ".env"), override: true });
+process.env.STORAGE_DRIVER = "local";
 process.env.STORAGE_DIR = mkdtempSync(path.join(os.tmpdir(), "analise-storage-"));
 
 const fixture = readFileSync(path.join(__dirname, "../fixtures/sample-analise.pdf"));
@@ -68,15 +68,20 @@ vi.mock("@/services/openai/auditor", () => ({
 let dbOk = false;
 let prismaMod: typeof import("@/lib/prisma");
 let userId = "";
+let tenant: TestTenant | null = null;
 const created: string[] = [];
 
 beforeAll(async () => {
+  if (!assertLocalDatabase()) return;
   try {
     prismaMod = await import("@/lib/prisma");
-    await prismaMod.prisma.$queryRaw`SELECT 1`;
-    const admin = await prismaMod.prisma.user.findFirst({ where: { role: "ADMIN" } });
-    if (!admin) throw new Error("seed ausente");
-    userId = admin.id;
+    await prismaMod.prismaUnscoped.$queryRaw`SELECT 1`;
+    tenant = await createTenant();
+    (globalThis as { __TEST_TENANT__?: string }).__TEST_TENANT__ = tenant.organizationId;
+    userId = tenant.userId;
+    const { setSystemSetting } = await import("@/repositories/settings-repository");
+    await setSystemSetting("polos", [{ code: "2085", name: "Unidade Centro" }]);
+    await setSystemSetting("aiEnabled", true);
     dbOk = true;
   } catch {
     dbOk = false;
@@ -84,10 +89,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  if (!dbOk) return;
-  // KEEP_TEST_DATA=1 preserva a análise para inspeção manual na UI
-  if (!process.env.KEEP_TEST_DATA) await prismaMod.prisma.curricularAnalysis.deleteMany({ where: { id: { in: created } } });
-  await prismaMod.prisma.$disconnect();
+  // KEEP_TEST_DATA=1 preserva a empresa de teste para inspeção manual
+  if (tenant && !process.env.KEEP_TEST_DATA) await dropTenants([tenant]);
 });
 
 describe("pipeline (integração)", () => {
@@ -114,7 +117,7 @@ describe("pipeline (integração)", () => {
     expect(fresh.entryPeriodSource).toBe("USER");
     expect(fresh.startTerm).toBe("2026.2");
     expect(fresh.studentName).toBe(`Aluno Teste ${idSuffix}`);
-    expect(fresh.poloName).toBe("Porto Velho - Centro - RO");
+    expect(fresh.poloName).toBe("Unidade Centro");
     expect(fresh.courseFormat).toBe("EAD_DIGITAL");
 
     // Rede de segurança para registros legados: sem ingresso, o pipeline não simula e aguarda confirmação.
