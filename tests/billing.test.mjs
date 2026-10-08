@@ -168,6 +168,66 @@ test("Resale: empty accounts, plans, entitlements, quotas and platform admin", a
       );
     });
 
+    await t.test("payment events are idempotent, ordered and server-only", async () => {
+      const billingOwner = await fixture("billing");
+      const org = await newOrg(billingOwner, "Pagamentos");
+      const yearly = await testPlan({ modules: ["atendimento"], billing_interval: "year", price_cents: 100000 });
+      const monthly = await testPlan({ modules: ["atendimento", "analise_curricular"], price_cents: 9900 });
+      const efiSubscription = Math.floor(Math.random() * 1e9);
+      ok(
+        await admin.from("subscriptions").insert({
+          organization_id: org,
+          plan_id: monthly.id,
+          status: "incomplete",
+          current_period_end: new Date().toISOString(),
+          efi_subscription_id: efiSubscription,
+          payment_method: "boleto",
+        })
+      );
+      assert.equal(ok(await billingOwner.client.rpc("my_entitlements", { org })).access, "none");
+      const event = (id, kind, charge, occurredAt) => ({
+        event_id: `test:${org}:${id}`,
+        kind,
+        org: null,
+        efi_subscription: efiSubscription,
+        efi_charge: charge,
+        amount: 9900,
+        occurred_at: occurredAt,
+        payload: { test: true },
+      });
+      denied(await billingOwner.client.rpc("billing_apply_event", event("forged", "paid", 1, new Date().toISOString())));
+      const firstCharge = Math.floor(Math.random() * 1e9);
+      assert.equal(ok(await admin.rpc("billing_apply_event", event("1", "paid", firstCharge, new Date().toISOString()))), true);
+      assert.equal(ok(await admin.rpc("billing_apply_event", event("1", "paid", firstCharge, new Date().toISOString()))), false);
+      let sub = ok(await admin.from("subscriptions").select("*").eq("organization_id", org).single());
+      assert.equal(sub.status, "active");
+      const firstEnd = new Date(sub.current_period_end).getTime();
+      assert.ok(firstEnd > Date.now() + 27 * 864e5 && firstEnd < Date.now() + 32 * 864e5);
+      assert.equal(ok(await admin.from("invoices").select("id").eq("organization_id", org)).length, 1);
+      // Renewal paid early extends from the end of the current period, never shrinking it.
+      ok(await admin.rpc("billing_apply_event", event("2", "paid", firstCharge + 1, new Date().toISOString())));
+      sub = ok(await admin.from("subscriptions").select("*").eq("organization_id", org).single());
+      assert.ok(new Date(sub.current_period_end).getTime() > firstEnd + 27 * 864e5);
+      // A pending downgrade takes effect on the next paid renewal.
+      ok(await admin.from("subscriptions").update({ pending_plan_id: yearly.id }).eq("organization_id", org));
+      ok(await admin.rpc("billing_apply_event", event("3", "paid", firstCharge + 2, new Date().toISOString())));
+      sub = ok(await admin.from("subscriptions").select("*").eq("organization_id", org).single());
+      assert.equal(sub.plan_id, yearly.id);
+      assert.equal(sub.pending_plan_id, null);
+      assert.deepEqual(ok(await billingOwner.client.rpc("my_entitlements", { org })).modules, ["atendimento"]);
+      ok(await admin.rpc("billing_apply_event", event("4", "unpaid", firstCharge + 3, null)));
+      assert.equal(ok(await admin.from("subscriptions").select("status").eq("organization_id", org).single()).status, "past_due");
+      ok(await admin.rpc("billing_apply_event", event("5", "canceled", null, null)));
+      sub = ok(await admin.from("subscriptions").select("*").eq("organization_id", org).single());
+      assert.equal(sub.status, "canceled");
+      assert.equal(ok(await billingOwner.client.rpc("my_entitlements", { org })).access, "full");
+      // Events from a replaced provider subscription are recorded but change nothing.
+      ok(await admin.from("subscriptions").update({ efi_subscription_id: efiSubscription + 1 }).eq("organization_id", org));
+      ok(await admin.rpc("billing_apply_event", { ...event("6", "unpaid", null, null), org }));
+      assert.equal(ok(await admin.from("subscriptions").select("status").eq("organization_id", org).single()).status, "canceled");
+      denied(await billingOwner.client.from("billing_profiles").insert({ organization_id: org, payer_name: "X", document: "12345678901", email: "a@b.c", phone: "11999999999" }));
+    });
+
     await t.test("only registered platform admins are recognized", async () => {
       assert.equal(ok(await owner.client.rpc("am_platform_admin")), false);
       await pool.query("insert into private.platform_admins(user_id) values ($1)", [other.user.id]);

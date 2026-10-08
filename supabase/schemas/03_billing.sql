@@ -43,7 +43,8 @@ create table public.subscriptions (
   plan_id uuid not null references public.plans(id),
   -- Downgrades take effect at the end of the paid period.
   pending_plan_id uuid references public.plans(id),
-  status text not null check (status in ('trialing', 'active', 'past_due', 'canceled', 'suspended')),
+  -- incomplete = assinatura criada aguardando o primeiro pagamento.
+  status text not null check (status in ('incomplete', 'trialing', 'active', 'past_due', 'canceled', 'suspended')),
   payment_method text check (payment_method in ('pix', 'boleto', 'credit_card', 'manual')),
   current_period_start timestamptz not null default now(),
   current_period_end timestamptz not null,
@@ -87,6 +88,17 @@ create table public.invoices (
 );
 create index invoices_org_idx on public.invoices(organization_id, created_at desc);
 create index invoices_plan_idx on public.invoices(plan_id);
+
+-- Dados de cobrança da empresa (pagador nos boletos e cartões).
+create table public.billing_profiles (
+  organization_id uuid primary key references public.organizations(id) on delete cascade,
+  payer_name text not null check (length(trim(payer_name)) between 2 and 120),
+  document text not null check (document ~ '^([0-9]{11}|[0-9]{14})$'),
+  email text not null check (position('@' in email) > 1),
+  phone text not null check (phone ~ '^[0-9]{10,11}$'),
+  address jsonb not null default '{}' check (jsonb_typeof(address) = 'object'),
+  updated_at timestamptz not null default now()
+);
 
 -- Payment provider notifications; the unique id makes webhook processing idempotent.
 create table private.billing_events (
@@ -186,6 +198,62 @@ begin
 end $$;
 create function public.consume_quota(org uuid, metric text, amount integer default 1) returns bigint
 language sql security invoker set search_path = '' as $$ select private.consume_quota(org, metric, amount) $$;
+
+-- Applies one provider event atomically. Returns false when the event was already processed.
+-- paid: marks the invoice paid (creating it for renewals), activates the subscription and extends the
+-- period from the later of now/current end, applying a pending downgrade on renewal.
+-- unpaid: past_due. canceled: keeps access until the paid period ends.
+create function private.billing_apply_event(event_id text, kind text, org uuid, efi_subscription bigint,
+  efi_charge bigint, amount integer, occurred_at timestamptz, payload jsonb) returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare sub public.subscriptions; target public.plans; months integer; period_start timestamptz; inserted integer;
+begin
+  if kind not in ('paid', 'unpaid', 'canceled') then raise exception 'Invalid billing event' using errcode = '23514'; end if;
+  insert into private.billing_events(id, provider, payload) values (event_id, 'efi', coalesce(payload, '{}'))
+    on conflict (id) do nothing;
+  get diagnostics inserted = row_count;
+  if inserted = 0 then return false; end if;
+  select * into sub from public.subscriptions s
+    where (org is not null and s.organization_id = org) or (efi_subscription is not null and s.efi_subscription_id = efi_subscription)
+    order by (s.organization_id = org) desc limit 1 for update;
+  if sub.organization_id is null then raise exception 'Subscription not found for billing event' using errcode = '23503'; end if;
+  if efi_subscription is not null and sub.efi_subscription_id is distinct from efi_subscription then
+    -- Event from a replaced subscription (e.g. after an upgrade): record only.
+    update private.billing_events set processed_at = now() where id = event_id;
+    return true;
+  end if;
+  if kind = 'paid' then
+    select * into target from public.plans where id = coalesce(sub.pending_plan_id, sub.plan_id);
+    months := case when target.billing_interval = 'year' then 12 else 1 end;
+    if sub.status in ('active', 'past_due') and sub.current_period_end > coalesce(occurred_at, now()) then
+      period_start := sub.current_period_end;
+    else
+      period_start := coalesce(occurred_at, now());
+    end if;
+    insert into public.invoices(organization_id, plan_id, amount_cents, status, method, description, period_start, period_end, due_at, paid_at, efi_charge_id)
+      values (sub.organization_id, target.id, coalesce(amount, target.price_cents), 'paid', coalesce(sub.payment_method, 'boleto'),
+        'Assinatura ' || target.name, period_start, period_start + make_interval(months => months), coalesce(occurred_at, now()), coalesce(occurred_at, now()), efi_charge)
+      on conflict (efi_charge_id) do update set status = 'paid', paid_at = excluded.paid_at, updated_at = now();
+    update public.subscriptions set plan_id = target.id, pending_plan_id = null, status = 'active',
+      current_period_start = period_start, current_period_end = period_start + make_interval(months => months),
+      updated_at = now()
+      where organization_id = sub.organization_id;
+  elsif kind = 'unpaid' then
+    update public.invoices set status = 'failed', updated_at = now() where efi_charge_id = efi_charge and status = 'pending';
+    update public.subscriptions set status = 'past_due', updated_at = now()
+      where organization_id = sub.organization_id and status in ('active', 'trialing', 'incomplete');
+  else
+    update public.subscriptions set status = 'canceled', cancel_at_period_end = true, updated_at = now()
+      where organization_id = sub.organization_id and status <> 'suspended';
+  end if;
+  update private.billing_events set processed_at = now() where id = event_id;
+  return true;
+end $$;
+create function public.billing_apply_event(event_id text, kind text, org uuid, efi_subscription bigint,
+  efi_charge bigint, amount integer, occurred_at timestamptz, payload jsonb) returns boolean
+language sql security invoker set search_path = '' as $$
+  select private.billing_apply_event(event_id, kind, org, efi_subscription, efi_charge, amount, occurred_at, payload)
+$$;
 
 create function private.my_entitlements(org uuid) returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
@@ -305,6 +373,13 @@ end $$;
 create trigger channels_limit before insert on public.channels
 for each row execute function private.enforce_channel_limit();
 
+-- CASE-safe organization id from a storage object path (<organization>/<...>).
+create function private.storage_org(object_name text) returns uuid
+language sql immutable set search_path = '' as $$
+  select case when (storage.foldername(object_name))[1] ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    then ((storage.foldername(object_name))[1])::uuid end
+$$;
+
 alter table private.platform_admins enable row level security;
 alter table private.billing_events enable row level security;
 alter table public.modules enable row level security;
@@ -313,6 +388,7 @@ alter table public.subscriptions enable row level security;
 alter table public.organization_addons enable row level security;
 alter table public.invoices enable row level security;
 alter table public.usage_counters enable row level security;
+alter table public.billing_profiles enable row level security;
 
 create policy modules_read on public.modules for select to anon, authenticated using (true);
 create policy plans_read on public.plans for select to anon, authenticated using (active and is_public);
@@ -324,6 +400,8 @@ create policy invoices_read on public.invoices for select to authenticated
 using (private.is_manager(organization_id));
 create policy usage_read on public.usage_counters for select to authenticated
 using (private.organization_role(organization_id) is not null);
+create policy billing_profiles_read on public.billing_profiles for select to authenticated
+using (private.is_manager(organization_id));
 
 -- Reads of attendance data also require the module (restrictive policies AND with the existing ones).
 create policy contacts_module on public.contacts as restrictive for select to authenticated
@@ -344,7 +422,11 @@ create policy messages_module on public.messages as restrictive for select to au
 using (private.has_module(organization_id, 'atendimento'));
 
 revoke all on public.modules, public.plans, public.subscriptions, public.organization_addons,
-  public.invoices, public.usage_counters from public, anon, authenticated;
+  public.invoices, public.usage_counters, public.billing_profiles from public, anon, authenticated;
+revoke maintain, references, trigger, truncate on public.modules, public.plans, public.subscriptions,
+  public.organization_addons, public.invoices, public.usage_counters, public.billing_profiles from anon, authenticated;
+grant select on public.billing_profiles to authenticated;
+grant all on public.billing_profiles to service_role;
 revoke all on private.platform_admins, private.billing_events from public, anon, authenticated, service_role;
 grant select on public.modules, public.plans to anon, authenticated;
 grant select on public.subscriptions, public.organization_addons, public.invoices, public.usage_counters to authenticated;
@@ -359,6 +441,8 @@ revoke all on function private.subscription_access(uuid), private.org_modules(uu
   private.consume_quota(uuid, text, integer), private.my_entitlements(uuid), private.start_trial(uuid, text),
   private.assign_organization_slug(), private.require_attendance_write(), private.enforce_member_limit(),
   private.enforce_channel_limit() from public, anon, authenticated, service_role;
+revoke all on function private.storage_org(text) from public, anon;
+grant execute on function private.storage_org(text) to authenticated, service_role;
 grant execute on function private.subscription_access(uuid), private.org_modules(uuid), private.has_module(uuid, text),
   private.can_write_module(uuid, text), private.org_limit(uuid, text), private.is_platform_admin(),
   private.consume_quota(uuid, text, integer), private.my_entitlements(uuid), private.start_trial(uuid, text)
@@ -368,3 +452,8 @@ revoke all on function public.am_platform_admin(), public.consume_quota(uuid, te
 grant execute on function public.am_platform_admin(), public.consume_quota(uuid, text, integer),
   public.my_entitlements(uuid), public.start_trial(uuid, text) to authenticated;
 grant execute on function public.consume_quota(uuid, text, integer) to service_role;
+-- Payment events are applied only by the server (service role).
+revoke all on function private.billing_apply_event(text, text, uuid, bigint, bigint, integer, timestamptz, jsonb) from public, anon, authenticated;
+grant execute on function private.billing_apply_event(text, text, uuid, bigint, bigint, integer, timestamptz, jsonb) to service_role;
+revoke all on function public.billing_apply_event(text, text, uuid, bigint, bigint, integer, timestamptz, jsonb) from public, anon, authenticated;
+grant execute on function public.billing_apply_event(text, text, uuid, bigint, bigint, integer, timestamptz, jsonb) to service_role;
