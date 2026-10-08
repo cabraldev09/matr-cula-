@@ -157,10 +157,6 @@ const MainListItems = (props) => {
 
   return (
     <div onClick={drawerClose}>
-      <ListItem button component="a" href="/saas">
-        <ListItemIcon><PeopleAltOutlinedIcon /></ListItemIcon>
-        {!collapsed && <ListItemText primary="Área SaaS" />}
-      </ListItem>
       <ListItemLink
         to="/"
         primary="Dashboard"

@@ -106,17 +106,33 @@ writeFileSync(
   `MESSAGING_DATABASE_URL=${status.DB_URL}\n`,
   { mode: 0o600 }
 );
-const envPath = "frontend/.env";
-let env = existsSync(envPath)
-  ? readFileSync(envPath, "utf8")
-  : "VITE_BACKEND_URL=http://localhost:8080/\n";
-env = env
+if (!existsSync("frontend/.env"))
+  writeFileSync("frontend/.env", "VITE_BACKEND_URL=http://localhost:8080/\n", { mode: 0o600 });
+// App web (Next.js): chaves do Supabase local sempre atualizadas; segredos próprios gerados uma vez.
+const webEnvPath = "web/.env.local";
+const supabaseKeys = {
+  DATABASE_URL: status.DB_URL,
+  NEXT_PUBLIC_SUPABASE_URL: status.API_URL,
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: status.PUBLISHABLE_KEY,
+  SUPABASE_SECRET_KEY: status.SECRET_KEY,
+};
+let webEnv = existsSync(webEnvPath)
+  ? readFileSync(webEnvPath, "utf8")
+  : [
+      `APP_ENCRYPTION_KEY=${randomBytes(32).toString("base64")}`,
+      `CRON_SECRET=${randomBytes(24).toString("hex")}`,
+      "STORAGE_DRIVER=supabase",
+      "APP_URL=http://localhost:3010",
+      "EFI_SANDBOX=true",
+      "",
+    ].join("\n");
+webEnv = webEnv
   .split("\n")
-  .filter((line) => !/^VITE_SUPABASE_(URL|PUBLISHABLE_KEY)=/.test(line))
+  .filter((line) => !Object.keys(supabaseKeys).some((key) => line.startsWith(`${key}=`)))
   .join("\n");
 writeFileSync(
-  envPath,
-  `${env}\nVITE_SUPABASE_URL=${status.API_URL}\nVITE_SUPABASE_PUBLISHABLE_KEY=${status.PUBLISHABLE_KEY}\n`,
+  webEnvPath,
+  `${Object.entries(supabaseKeys).map(([key, value]) => `${key}=${value}`).join("\n")}\n${webEnv.replace(/^\n+/, "")}`,
   { mode: 0o600 }
 );
 run("npm", ["--prefix", "backend", "run", "build"]);
@@ -145,6 +161,12 @@ const services = [
     args: [],
     cwd: resolve("backend"),
   },
+  {
+    name: "web",
+    entry: resolve("web/node_modules/next/dist/bin/next"),
+    args: ["dev", "-p", "3010"],
+    cwd: resolve("web"),
+  },
 ];
 const state = [];
 for (const service of services) {
@@ -166,5 +188,5 @@ try {
   throw new Error("Um servidor encerrou. Confira os logs em .local.");
 }
 console.log(
-  "SaaS: http://localhost:3002/saas\nCommunity: http://localhost:3002\nSupabase Studio: http://localhost:56423"
+  "Matrícula+: http://localhost:3010\nWhatsApp QR (legado): http://localhost:3002\nSupabase Studio: http://localhost:56423"
 );

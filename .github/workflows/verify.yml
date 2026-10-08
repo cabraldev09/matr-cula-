@@ -15,13 +15,51 @@ jobs:
             package-lock.json
             backend/package-lock.json
             frontend/package-lock.json
+            web/package-lock.json
       - uses: supabase/setup-cli@v1
         with:
           version: 2.111.0
       - run: npm ci
       - run: npm ci --prefix backend
       - run: npm ci --prefix frontend
-      - run: npm run build
+      - run: npm ci --prefix web
+      - run: npm --prefix backend run build
+      - run: npm --prefix frontend run build
       - run: supabase start --exclude logflare,vector,edge-runtime,supavisor > /tmp/whaticket-supabase-start.log 2>&1
+      - name: Configure the web app for the local Supabase
+        run: |
+          node -e '
+            const { execFileSync } = require("node:child_process");
+            const { randomBytes } = require("node:crypto");
+            const s = JSON.parse(execFileSync("supabase", ["status", "-o", "json"], { encoding: "utf8" }));
+            require("node:fs").writeFileSync("web/.env.local", [
+              `DATABASE_URL=${s.DB_URL}`,
+              `NEXT_PUBLIC_SUPABASE_URL=${s.API_URL}`,
+              `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${s.PUBLISHABLE_KEY}`,
+              `SUPABASE_SECRET_KEY=${s.SECRET_KEY}`,
+              `APP_ENCRYPTION_KEY=${randomBytes(32).toString("base64")}`,
+              `CRON_SECRET=${randomBytes(24).toString("hex")}`,
+              "STORAGE_DRIVER=supabase",
+              "APP_URL=http://localhost:3010",
+              "",
+            ].join("\n"));'
       - run: npm test
+      - run: npm --prefix web run typecheck
+      - run: npm --prefix web run lint
+      - run: npm --prefix web test
+      - run: npm --prefix web run build
       - run: supabase db advisors --local --type security --level warn --fail-on warn
+      - name: Browser test
+        run: |
+          npx playwright install --with-deps chromium
+          (cd web && npx next start -p 3010 > /tmp/web.log 2>&1 &)
+          npx wait-on -t 60000 http://localhost:3010/login
+          npx playwright test
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics
+          path: |
+            .local/playwright
+            /tmp/web.log
+          if-no-files-found: ignore
