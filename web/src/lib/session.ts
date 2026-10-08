@@ -320,6 +320,15 @@ export async function requireModule(module: ModuleCode): Promise<SessionUser> {
   return user;
 }
 
+/** Para páginas que só dependem do módulo contratado (sem perfil da análise curricular). */
+export async function requireContextModule(module: ModuleCode): Promise<SessionContext & { organization: OrganizationMembership }> {
+  const context = await getSessionContext();
+  if (!context) redirect("/login");
+  if (!context.organization) redirect("/onboarding");
+  if (!context.entitlements?.modules.includes(module)) redirect(`/conta/plano?modulo=${module}`);
+  return context as SessionContext & { organization: OrganizationMembership };
+}
+
 /** Administração da empresa (dono/administrador), independente de módulo. */
 export async function requireOrganizationManager(): Promise<SessionContext & { organization: OrganizationMembership }> {
   const context = await getSessionContext();
