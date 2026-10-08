@@ -6,6 +6,8 @@ import { OpenAISecretService } from "@/services/openai/credentials";
 import { OpenAIIntegrationError, OPENAI_ERROR_MESSAGES } from "@/services/openai/errors";
 import { isAiEnabled } from "@/repositories/settings-repository";
 import { openAIIntegrationWhere } from "@/services/openai/integration-key";
+import { getEnv } from "@/lib/env";
+import { consumeQuota, QuotaExceededError } from "@/services/billing/quota";
 
 export interface OpenAIRuntimeConfig {
   extractionModel: string;
@@ -31,9 +33,25 @@ export async function getOpenAIClient(opts?: { timeoutMs?: number; maxRetries?: 
   if (!opts?.ignoreAiSwitch && !(await isAiEnabled())) {
     throw new OpenAIIntegrationError("AI_DISABLED", OPENAI_ERROR_MESSAGES.AI_DISABLED);
   }
-  const apiKey = await OpenAISecretService.getApiKeyForServer();
-  const integration = await prisma.openAIIntegration.findUniqueOrThrow({
+  let apiKey: string;
+  try {
+    apiKey = await OpenAISecretService.getApiKeyForServer();
+  } catch (err) {
+    // Sem chave própria, a empresa usa a chave da plataforma e consome os créditos de IA do plano.
+    const platformKey = getEnv().OPENAI_PLATFORM_API_KEY;
+    if (!(err instanceof OpenAIIntegrationError) || err.code !== "NOT_CONFIGURED" || !platformKey) throw err;
+    try {
+      await consumeQuota("ai_credits");
+    } catch (quotaError) {
+      if (quotaError instanceof QuotaExceededError) throw new OpenAIIntegrationError("PLAN_CREDITS_EXHAUSTED", OPENAI_ERROR_MESSAGES.PLAN_CREDITS_EXHAUSTED);
+      throw quotaError;
+    }
+    apiKey = platformKey;
+  }
+  const integration = await prisma.openAIIntegration.upsert({
     where: await openAIIntegrationWhere(),
+    create: {},
+    update: {},
     select: { extractionModel: true, auditModel: true, futureExplanationModel: true },
   });
   const client = new OpenAI({

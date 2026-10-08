@@ -12,9 +12,12 @@ export type OpenAIErrorCode =
   | "FILE_REJECTED"
   | "NOT_CONFIGURED"
   | "AI_DISABLED"
+  | "PLAN_CREDITS_EXHAUSTED"
   | "UNKNOWN";
 
 export const OPENAI_ERROR_MESSAGES: Record<OpenAIErrorCode, string> = {
+  PLAN_CREDITS_EXHAUSTED:
+    "Os créditos de IA do plano acabaram neste mês. Cadastre uma chave OpenAI própria em Configurações → OpenAI ou faça upgrade.",
   INVALID_API_KEY:
     "A API Key é inválida ou foi revogada. Verifique a chave do projeto na OpenAI.",
   FORBIDDEN:

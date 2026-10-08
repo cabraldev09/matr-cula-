@@ -8,6 +8,7 @@ import { PdfValidationError } from "@/services/pdf/validate";
 import { runAnalysisPipeline } from "@/services/pipeline/runner";
 import { logger } from "@/lib/logger";
 import { withTenant } from "@/lib/tenant";
+import { QuotaExceededError } from "@/services/billing/quota";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -55,6 +56,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/analyses/[id]/r
     after(() => withTenant(user.organizationId, () => runAnalysisPipeline(result.id)).catch((err) => logger.error("pipeline.unhandled", { analysisId: result.id, err: String(err) })));
     return NextResponse.json({ id: result.id }, { status: 201 });
   } catch (err) {
+    if (err instanceof QuotaExceededError) return NextResponse.json({ error: err.message, code: "QUOTA_EXCEEDED" }, { status: 402 });
     if (err instanceof PdfValidationError) return NextResponse.json({ error: err.message }, { status: 422 });
     if (err instanceof DuplicateDocumentError) return NextResponse.json({ error: "Este PDF já foi analisado. Envie a versão atualizada do documento.", existingId: err.existingAnalysisId }, { status: 409 });
     if (err instanceof InvalidReanalysisError) return NextResponse.json({ error: err.message }, { status: 400 });

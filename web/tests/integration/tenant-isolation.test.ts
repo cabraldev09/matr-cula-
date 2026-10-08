@@ -112,4 +112,23 @@ describe("isolamento entre empresas", () => {
     await expect(tenantMod.withTenant(b.organizationId, () => getStorage().read(stored.key))).rejects.toThrow(/outra empresa/);
     expect((await tenantMod.withTenant(a.organizationId, () => getStorage().read(stored.key))).toString()).toBe("%PDF-1.4");
   });
+
+  it("a cota mensal de análises do plano é respeitada", async ({ skip }) => {
+    if (!ready) skip();
+    const { prismaUnscoped } = prismaMod;
+    const code = `quota-${a.organizationId.slice(0, 8)}`;
+    await prismaUnscoped.$executeRaw`insert into public.plans(code, name, price_cents, modules, limits) values (${code}, 'Cota teste', 100, array['analise_curricular'], '{"analyses": 1}')`;
+    await prismaUnscoped.$executeRaw`insert into public.subscriptions(organization_id, plan_id, status, current_period_end)
+      select ${a.organizationId}::uuid, id, 'active', now() + interval '30 days' from public.plans where code = ${code}`;
+    try {
+      const { consumeQuota, QuotaExceededError } = await import("@/services/billing/quota");
+      await tenantMod.withTenant(a.organizationId, () => consumeQuota("analyses"));
+      await expect(tenantMod.withTenant(a.organizationId, () => consumeQuota("analyses"))).rejects.toBeInstanceOf(QuotaExceededError);
+      // Outra empresa (sem plano limitado) não é afetada.
+      await tenantMod.withTenant(b.organizationId, () => consumeQuota("analyses"));
+    } finally {
+      await prismaUnscoped.$executeRaw`delete from public.subscriptions where organization_id = ${a.organizationId}::uuid`;
+      await prismaUnscoped.$executeRaw`delete from public.plans where code = ${code}`;
+    }
+  });
 });

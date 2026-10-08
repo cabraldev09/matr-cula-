@@ -15,6 +15,7 @@ import { initialSteps } from "@/services/pipeline/steps";
 import { recordAudit } from "@/services/audit-log/audit-log";
 import type { Prisma } from "@/generated/prisma/client";
 import type { RetentionPolicy } from "@/generated/prisma/enums";
+import { consumeQuota } from "@/services/billing/quota";
 
 export function retentionDeadline(policy: RetentionPolicy, from = new Date()): Date | null {
   const days: Partial<Record<RetentionPolicy, number>> = { DAYS_30: 30, DAYS_90: 90, DAYS_180: 180 };
@@ -111,6 +112,8 @@ export async function createAnalysisFromUpload(input: CreateAnalysisInput): Prom
   } else if (previous) {
     throw new StudentAlreadyAnalyzedError(previous.id, previous.studentName);
   }
+  // Cota mensal de análises do plano (conferida no banco, sem corrida entre envios simultâneos).
+  await consumeQuota("analyses");
   const storage = getStorage();
   const stored = await storage.save(input.bytes, { extension: "pdf" });
   const entryTerm = input.entryTerm;

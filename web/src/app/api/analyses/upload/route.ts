@@ -20,6 +20,7 @@ import { isValidTerm } from "@/domain/curricular-analysis/simulation/terms";
 import { z } from "zod";
 import { validatePdfBytes } from "@/services/pdf/validate";
 import { withTenant } from "@/lib/tenant";
+import { QuotaExceededError } from "@/services/billing/quota";
 
 /**
  * O período acadêmico e o curso vêm do PDF; o semestre-calendário define o início da previsão. Quando o SIAA
@@ -165,6 +166,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ id }, { status: 201 });
   } catch (err) {
+    if (err instanceof QuotaExceededError) return NextResponse.json({ error: err.message, code: "QUOTA_EXCEEDED" }, { status: 402 });
     if (err instanceof PdfValidationError)
       return NextResponse.json(
         { error: err.message, code: err.code },
