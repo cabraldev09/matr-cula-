@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/session";
+import { can } from "@/lib/rbac";
 import { listAnalysesForReport } from "@/repositories/analysis-repository";
 import { ANALYSIS_STATUS_LABELS, RELIABILITY_LABELS } from "@/components/shared/status-badge";
 import { formatDateTime } from "@/lib/time";
-import { isPoloCode } from "@/domain/polos";
 import { formatCourseFormat } from "@/domain/course-formats";
 
 export const runtime = "nodejs";
@@ -21,13 +21,14 @@ function cell(value: string | number | null | undefined): string {
 export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  if (!user.modules.includes("analise_curricular") || !can(user.role, "analysis:read")) return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
   const url = new URL(req.url);
   const polo = url.searchParams.get("polo");
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
   const rows = await listAnalysesForReport({
-    createdById: user.role === "ADMIN" ? undefined : user.id,
-    poloCode: polo && isPoloCode(polo) ? polo : undefined,
+    createdById: can(user.role, "academic:all") ? undefined : user.id,
+    poloCode: polo && /^[\w-]{1,20}$/.test(polo) ? polo : undefined,
     from: from && !Number.isNaN(Date.parse(from)) ? new Date(from) : undefined,
     to: to && !Number.isNaN(Date.parse(to)) ? new Date(to) : undefined,
   });
