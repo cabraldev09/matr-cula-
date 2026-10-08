@@ -97,7 +97,7 @@ export function PlanPicker({
                     <li key={module} className="flex items-center gap-2"><Check className="size-4 text-status-success" /> {moduleNames[module] ?? module}</li>
                   ))}
                   {Object.entries(plan.limits).map(([key, value]) => (
-                    <li key={key} className="flex items-center gap-2 text-muted-foreground"><span className="size-4" /> Até {value} {LIMIT_LABELS[key] ?? key}</li>
+                    <li key={key} className="flex items-center gap-2 text-muted-foreground"><span className="size-4" /> {value === 1 ? `1 ${(LIMIT_LABELS[key] ?? key).replace(/s(\b| )/, "$1")}` : `Até ${value} ${LIMIT_LABELS[key] ?? key}`}</li>
                   ))}
                 </ul>
                 <div className="mt-auto grid gap-2">

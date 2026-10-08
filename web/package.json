@@ -13,7 +13,8 @@
     "db:generate": "prisma generate",
     "postinstall": "node scripts/copy-pdf-worker.mjs && prisma generate",
     "prebuild": "node scripts/copy-pdf-worker.mjs",
-    "vercel-build": "node scripts/vercel-build.mjs"
+    "vercel-build": "node scripts/vercel-build.mjs",
+    "platform:admin": "node scripts/grant-platform-admin.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
