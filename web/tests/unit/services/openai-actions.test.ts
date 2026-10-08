@@ -1,0 +1,176 @@
+/**
+ * Testa as server actions da integração OpenAI com Prisma e SDK mockados:
+ * conectar, trocar chave (válida/inválida), desconectar, RBAC e ausência da chave nas respostas.
+ */
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const state: { settings: Record<string, unknown>; integration: Record<string, unknown>; user: { id: string; role: string } | null; audits: unknown[]; usages: unknown[] } = {
+  settings: {},
+  integration: {},
+  user: null,
+  audits: [],
+  usages: [],
+};
+
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+vi.mock("@/lib/tenant", () => ({ currentTenant: async () => "00000000-0000-0000-0000-0000000000aa", withTenant: (_: string, fn: () => unknown) => fn() }));
+vi.mock("@/lib/session", async () => {
+  const { can } = await import("@/lib/rbac");
+  class ForbiddenError extends Error { name = "ForbiddenError"; }
+  class UnauthorizedError extends Error { name = "UnauthorizedError"; }
+  const current = () => (state.user ? { ...state.user, email: "u@x", name: "U", authUserId: state.user.id, organizationId: "00000000-0000-0000-0000-0000000000aa", organizationName: "Empresa", memberRole: "admin", modules: ["analise_curricular"] } : null);
+  return {
+    ForbiddenError,
+    UnauthorizedError,
+    getSessionUser: async () => current(),
+    requirePermission: async (permission: Parameters<typeof can>[1]) => {
+      const user = current();
+      if (!user) throw new UnauthorizedError("Sessão inválida.");
+      if (!can(user.role as never, permission)) throw new ForbiddenError("Você não tem permissão para esta ação.");
+      return user;
+    },
+  };
+});
+vi.mock("@/lib/prisma", () => {
+  const upsert = async ({ create, update }: { create: Record<string, unknown>; update: Record<string, unknown> }) => {
+    if (!state.integration.id) state.integration = { status: "DISCONNECTED", extractionModel: "gpt-5.5", auditModel: "gpt-5.4-mini", updatedAt: new Date(), ...create };
+    else Object.assign(state.integration, update);
+    return { ...state.integration };
+  };
+  const update = async ({ data }: { data: Record<string, unknown> }) => {
+    Object.assign(state.integration, data);
+    return { ...state.integration };
+  };
+  return {
+    prisma: {
+      user: { findUnique: async () => state.user ? { ...state.user, isActive: true, sessionVersion: 0, name: "U", email: "u@x", mustChangePassword: false } : null },
+      openAIIntegration: {
+        upsert,
+        update,
+        updateMany: update,
+        findUnique: async () => ({ ...state.integration }),
+        findUniqueOrThrow: async () => ({ ...state.integration }),
+      },
+      systemSetting: {
+        findFirst: async ({ where }: { where: { key: string } }) => (where.key in state.settings ? { key: where.key, value: state.settings[where.key] } : null),
+        findMany: async () => Object.entries(state.settings).map(([key, value]) => ({ key, value })),
+        upsert: async ({ where, create }: { where: { organizationId_key: { key: string } }; create: { value: unknown } }) => { state.settings[where.organizationId_key.key] = create.value; return {}; },
+      },
+      auditLog: { create: async ({ data }: { data: unknown }) => state.audits.push(data) },
+      aIUsage: { create: async ({ data }: { data: unknown }) => state.usages.push(data) },
+    },
+  };
+});
+
+const connection = { shouldFail: false };
+vi.mock("@/services/openai/test-connection", async () => {
+  const { OpenAIIntegrationError } = await import("@/services/openai/errors");
+  return {
+    testOpenAIConnection: async (apiKey: string, model: string) => {
+      if (connection.shouldFail || !apiKey.startsWith("sk-")) throw new OpenAIIntegrationError("INVALID_API_KEY", "A API Key é inválida ou foi revogada.");
+      return { ok: true, model, durationMs: 10, usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } };
+    },
+    checkModelAvailable: async () => undefined,
+  };
+});
+
+import { connectOpenAIAction, disconnectOpenAIAction, getOpenAIIntegrationView, replaceOpenAIKeyAction, setAiEnabledAction } from "@/features/integrations/openai/actions";
+import { OpenAISecretService } from "@/services/openai/credentials";
+import { resetRateLimits } from "@/services/rate-limit/rate-limit";
+
+const KEY_A = "sk-proj-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA1234";
+const KEY_B = "sk-proj-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB5678";
+
+beforeEach(() => {
+  state.integration = { id: "default", status: "DISCONNECTED", extractionModel: "gpt-5.5", auditModel: "gpt-5.4-mini", updatedAt: new Date() };
+  state.user = { id: "11111111-1111-4111-8111-111111111111", role: "ADMIN" };
+  state.settings = {};
+  state.audits = [];
+  state.usages = [];
+  connection.shouldFail = false;
+  resetRateLimits();
+});
+
+describe("setAiEnabledAction", () => {
+  it("liga/desliga a IA, audita e reflete na visão; padrão é desligada", async () => {
+    expect((await getOpenAIIntegrationView()).aiEnabled).toBe(false);
+    const on = await setAiEnabledAction(true);
+    expect(on.ok).toBe(true);
+    expect(state.settings.aiEnabled).toBe(true);
+    expect((await getOpenAIIntegrationView()).aiEnabled).toBe(true);
+    expect(state.audits.some((a) => (a as { action: string }).action === "openai.ai_enabled")).toBe(true);
+    expect((await setAiEnabledAction(false)).ok).toBe(true);
+    expect((await getOpenAIIntegrationView()).aiEnabled).toBe(false);
+  });
+  it("valor inválido e perfil sem permissão são recusados", async () => {
+    expect((await setAiEnabledAction("nao")).ok).toBe(false);
+    state.user = { id: "22222222-2222-4222-8222-222222222222", role: "ANALYST" };
+    expect((await setAiEnabledAction(false)).ok).toBe(false);
+    expect(state.settings.aiEnabled).toBeUndefined();
+  });
+});
+
+describe("connectOpenAIAction", () => {
+  it("valida de verdade e persiste cifrado; nunca devolve a chave", async () => {
+    const res = await connectOpenAIAction({ apiKey: KEY_A, projectLabel: "P", serviceAccountLabel: "SA" });
+    expect(res.ok).toBe(true);
+    expect(JSON.stringify(res)).not.toContain(KEY_A);
+    expect(res.ok && res.data.apiKeyLastFour).toBe("1234");
+    expect(state.integration.status).toBe("CONNECTED");
+    expect(state.integration.encryptedApiKey).not.toContain("sk-");
+    expect(await OpenAISecretService.getApiKeyForServer()).toBe(KEY_A);
+    expect(state.audits.some((a) => (a as { action: string }).action === "openai.connect")).toBe(true);
+    const view = await getOpenAIIntegrationView();
+    expect(JSON.stringify(view)).not.toContain(KEY_A);
+    expect(view.apiKeyLastFour).toBe("1234");
+  });
+  it("chave inválida não é persistida", async () => {
+    const res = await connectOpenAIAction({ apiKey: "sk-proj-INVALIDINVALIDINVALIDINVALIDINVALID", projectLabel: "", serviceAccountLabel: "" });
+    connection.shouldFail = true;
+    expect(res.ok).toBe(true); // mock aceita qualquer sk-; força falha no próximo
+    state.integration = { id: "default", status: "DISCONNECTED", extractionModel: "gpt-5.5", auditModel: "gpt-5.4-mini", updatedAt: new Date() };
+    const res2 = await connectOpenAIAction({ apiKey: KEY_B });
+    expect(res2.ok).toBe(false);
+    expect(state.integration.status).toBe("DISCONNECTED");
+    expect(state.integration.encryptedApiKey).toBeUndefined();
+  });
+  it("ANALISTA não pode acessar credencial/configuração", async () => {
+    state.user = { id: "22222222-2222-4222-8222-222222222222", role: "ANALYST" };
+    const res = await connectOpenAIAction({ apiKey: KEY_A });
+    expect(res.ok).toBe(false);
+    expect(!res.ok && res.error).toMatch(/permissão/);
+    await expect(getOpenAIIntegrationView()).rejects.toThrow(/permissão/);
+  });
+});
+
+describe("replaceOpenAIKeyAction", () => {
+  it("troca por chave válida", async () => {
+    await connectOpenAIAction({ apiKey: KEY_A });
+    const res = await replaceOpenAIKeyAction({ apiKey: KEY_B });
+    expect(res.ok).toBe(true);
+    expect(await OpenAISecretService.getApiKeyForServer()).toBe(KEY_B);
+    expect(state.integration.apiKeyLastFour).toBe("5678");
+  });
+  it("chave inválida mantém a anterior ativa", async () => {
+    await connectOpenAIAction({ apiKey: KEY_A });
+    connection.shouldFail = true;
+    const res = await replaceOpenAIKeyAction({ apiKey: KEY_B });
+    expect(res.ok).toBe(false);
+    expect(!res.ok && res.error).toMatch(/anterior foi mantida/);
+    expect(state.integration.status).toBe("CONNECTED");
+    expect(await OpenAISecretService.getApiKeyForServer()).toBe(KEY_A);
+  });
+});
+
+describe("disconnectOpenAIAction", () => {
+  it("remove a chave e registra auditoria", async () => {
+    await connectOpenAIAction({ apiKey: KEY_A });
+    const res = await disconnectOpenAIAction();
+    expect(res.ok).toBe(true);
+    expect(state.integration.status).toBe("DISCONNECTED");
+    expect(state.integration.encryptedApiKey).toBeNull();
+    await expect(OpenAISecretService.getApiKeyForServer()).rejects.toMatchObject({ code: "NOT_CONFIGURED" });
+    expect(state.audits.some((a) => (a as { action: string }).action === "openai.disconnect")).toBe(true);
+  });
+});

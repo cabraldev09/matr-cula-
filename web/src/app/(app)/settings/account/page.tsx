@@ -1,0 +1,94 @@
+import type { Metadata } from "next";
+import { requireUser } from "@/lib/session";
+import { ShieldCheck } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ChangePasswordForm } from "@/features/account/change-password-form";
+import { NotificationPreferences } from "@/features/account/notification-preferences";
+import { ROLE_LABELS } from "@/lib/rbac";
+import { prisma } from "@/lib/prisma";
+import { getSystemSettings } from "@/repositories/settings-repository";
+
+export const metadata: Metadata = { title: "Minha conta" };
+export const dynamic = "force-dynamic";
+
+export default async function AccountPage({
+  searchParams,
+}: PageProps<"/settings/account">) {
+  const user = await requireUser();
+  const params = await searchParams;
+  const notificationsRequired = params.notifications === "required";
+  const [preferences, settings] = await Promise.all([
+    prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: {
+        followUpEmailEnabled: true,
+        followUpPushEnabled: true,
+        followUpRepeatBusinessDays: true,
+        followUpBusinessStartHour: true,
+        followUpBusinessEndHour: true,
+        followUpCadence: true,
+        followUpPreferencesConfirmedAt: true,
+      },
+    }),
+    getSystemSettings(),
+  ]);
+  return (
+    <>
+      <PageHeader
+        eyebrow="Configurações"
+        title="Minha conta"
+        description={`${user.name} · ${user.email} · ${ROLE_LABELS[user.role]}`}
+      />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base">Alterar senha</CardTitle>
+            <CardDescription>
+              Use a senha atual para confirmar. A alteração é registrada na auditoria.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChangePasswordForm />
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Notificações de matrícula
+            </CardTitle>
+            <CardDescription>
+              Defina seus canais, seu expediente e a frequência dos avisos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <NotificationPreferences
+              initialEmail={preferences.followUpEmailEnabled}
+              initialPush={preferences.followUpPushEnabled}
+              initialRepeatDays={preferences.followUpRepeatBusinessDays}
+              initialStartHour={preferences.followUpBusinessStartHour}
+              initialEndHour={preferences.followUpBusinessEndHour}
+              initialCadence={
+                preferences.followUpCadence ?? settings.followUpDefaultCadence
+              }
+              required={
+                notificationsRequired ||
+                !preferences.followUpPreferencesConfirmedAt
+              }
+            />
+          </CardContent>
+        </Card>
+      </div>
+      <p className="mt-6 flex items-start gap-2 text-xs text-muted-foreground">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-brand-cyan-700" aria-hidden="true" />
+        O sistema registra o uso (telas e tempo ativo) para a gestão da equipe. O conteúdo que você digita e os dados de alunos não entram nesse registro.
+      </p>
+    </>
+  );
+}

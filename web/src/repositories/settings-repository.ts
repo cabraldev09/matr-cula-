@@ -1,0 +1,174 @@
+import "server-only";
+import { prisma } from "@/lib/prisma";
+import { currentTenant } from "@/lib/tenant";
+import type { AIPrivacyMode, RetentionPolicy } from "@/generated/prisma/enums";
+import type { Prisma } from "@/generated/prisma/client";
+import type { CourseFormat } from "@/generated/prisma/enums";
+import type { FollowUpCadence } from "@/generated/prisma/enums";
+import type { Polo } from "@/domain/polos";
+import { COURSE_FORMATS } from "@/domain/course-formats";
+
+export interface PoloContactEntry {
+  nome: string;
+  email: string;
+  telefone: string;
+}
+
+export interface PoloContacts {
+  mantenedor: PoloContactEntry;
+  coordAcademico: PoloContactEntry;
+  coordComercial: PoloContactEntry;
+}
+
+export interface SystemSettings {
+  retentionPolicy: RetentionPolicy;
+  aiPrivacyMode: AIPrivacyMode;
+  /** Chave geral da IA: desligada, o sistema usa só a leitura local do PDF e nenhuma chamada à OpenAI é feita. */
+  aiEnabled: boolean;
+  institutionName: string;
+  maxUploadMb: number;
+  maxPdfPages: number;
+  defaultStartTerm: string | null;
+  aiMonthlyBudgetUsd: number;
+  usdBrlReferenceRate: number;
+  polos: Polo[];
+  courseFormats: CourseFormat[];
+  followUpBusinessStartHour: number;
+  followUpBusinessEndHour: number;
+  followUpRepeatBusinessDays: number;
+  followUpDefaultCadence: FollowUpCadence;
+  /** Contatos institucionais (mantenedor, coordenação acadêmica e comercial) por código de polo. */
+  poloContacts: Record<string, PoloContacts>;
+}
+
+const DEFAULTS: SystemSettings = {
+  retentionPolicy: "DAYS_90",
+  aiPrivacyMode: "REDACTED_TEXT",
+  aiEnabled: false,
+  institutionName: "",
+  maxUploadMb: 20,
+  maxPdfPages: 60,
+  defaultStartTerm: null,
+  aiMonthlyBudgetUsd: 0,
+  usdBrlReferenceRate: 5.5,
+  polos: [],
+  courseFormats: COURSE_FORMATS.map((format) => format.code),
+  followUpBusinessStartHour: 8,
+  followUpBusinessEndHour: 18,
+  followUpRepeatBusinessDays: 1,
+  followUpDefaultCadence: "TWICE_DAILY",
+  poloContacts: {},
+};
+
+const EMPTY_CONTACT: PoloContactEntry = { nome: "", email: "", telefone: "" };
+
+function validContactEntry(value: unknown): PoloContactEntry {
+  if (!value || typeof value !== "object") return { ...EMPTY_CONTACT };
+  const v = value as Record<string, unknown>;
+  return {
+    nome: typeof v.nome === "string" ? v.nome : "",
+    email: typeof v.email === "string" ? v.email : "",
+    telefone: typeof v.telefone === "string" ? v.telefone : "",
+  };
+}
+
+function validPoloContacts(value: unknown): Record<string, PoloContacts> {
+  if (!value || typeof value !== "object") return {};
+  const result: Record<string, PoloContacts> = {};
+  for (const [code, entry] of Object.entries(value as Record<string, unknown>)) {
+    if (!entry || typeof entry !== "object") continue;
+    const e = entry as Record<string, unknown>;
+    result[code] = {
+      mantenedor: validContactEntry(e.mantenedor),
+      coordAcademico: validContactEntry(e.coordAcademico),
+      coordComercial: validContactEntry(e.coordComercial),
+    };
+  }
+  return result;
+}
+
+function validPolos(value: unknown): Polo[] {
+  if (!Array.isArray(value)) return DEFAULTS.polos;
+  const polos = value.filter(
+    (item): item is Polo =>
+      Boolean(item) &&
+      typeof item === "object" &&
+      typeof (item as Polo).code === "string" &&
+      /^\d{3,12}$/.test((item as Polo).code) &&
+      typeof (item as Polo).name === "string" &&
+      (item as Polo).name.trim().length >= 2,
+  );
+  return polos.length ? polos : DEFAULTS.polos;
+}
+
+function validCourseFormats(value: unknown): CourseFormat[] {
+  if (!Array.isArray(value)) return DEFAULTS.courseFormats;
+  const allowed = new Set(COURSE_FORMATS.map((format) => format.code));
+  const formats = value.filter(
+    (item): item is CourseFormat =>
+      typeof item === "string" && allowed.has(item as CourseFormat),
+  );
+  return formats.length ? formats : DEFAULTS.courseFormats;
+}
+
+export async function getSystemSettings(): Promise<SystemSettings> {
+  const rows = await prisma.systemSetting.findMany();
+  const map = Object.fromEntries(rows.map((r) => [r.key, r.value])) as Partial<
+    Record<keyof SystemSettings, unknown>
+  >;
+  return {
+    retentionPolicy:
+      (map.retentionPolicy as RetentionPolicy) ?? DEFAULTS.retentionPolicy,
+    aiPrivacyMode:
+      (map.aiPrivacyMode as AIPrivacyMode) ?? DEFAULTS.aiPrivacyMode,
+    aiEnabled: typeof map.aiEnabled === "boolean" ? map.aiEnabled : DEFAULTS.aiEnabled,
+    institutionName:
+      (map.institutionName as string) ?? DEFAULTS.institutionName,
+    maxUploadMb: Number(map.maxUploadMb ?? DEFAULTS.maxUploadMb),
+    maxPdfPages: Number(map.maxPdfPages ?? DEFAULTS.maxPdfPages),
+    defaultStartTerm:
+      typeof map.defaultStartTerm === "string"
+        ? map.defaultStartTerm
+        : DEFAULTS.defaultStartTerm,
+    aiMonthlyBudgetUsd: Number(
+      map.aiMonthlyBudgetUsd ?? DEFAULTS.aiMonthlyBudgetUsd,
+    ),
+    usdBrlReferenceRate: Number(
+      map.usdBrlReferenceRate ?? DEFAULTS.usdBrlReferenceRate,
+    ),
+    polos: validPolos(map.polos),
+    courseFormats: validCourseFormats(map.courseFormats),
+    followUpBusinessStartHour: Number(
+      map.followUpBusinessStartHour ?? DEFAULTS.followUpBusinessStartHour,
+    ),
+    followUpBusinessEndHour: Number(
+      map.followUpBusinessEndHour ?? DEFAULTS.followUpBusinessEndHour,
+    ),
+    followUpRepeatBusinessDays: Number(
+      map.followUpRepeatBusinessDays ?? DEFAULTS.followUpRepeatBusinessDays,
+    ),
+    followUpDefaultCadence:
+      map.followUpDefaultCadence === "ONCE_DAILY"
+        ? "ONCE_DAILY"
+        : DEFAULTS.followUpDefaultCadence,
+    poloContacts: validPoloContacts(map.poloContacts),
+  };
+}
+
+export async function setSystemSetting<K extends keyof SystemSettings>(
+  key: K,
+  value: SystemSettings[K],
+) {
+  const organizationId = await currentTenant();
+  await prisma.systemSetting.upsert({
+    where: { organizationId_key: { organizationId, key } },
+    create: { key, value: value as Prisma.InputJsonValue },
+    update: { value: value as Prisma.InputJsonValue },
+  });
+}
+
+/** Leitura leve da chave geral da IA (usada antes de qualquer chamada à OpenAI). */
+export async function isAiEnabled(): Promise<boolean> {
+  const row = await prisma.systemSetting.findFirst({ where: { key: "aiEnabled" } });
+  return typeof row?.value === "boolean" ? row.value : DEFAULTS.aiEnabled;
+}

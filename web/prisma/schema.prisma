@@ -1,0 +1,1131 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["curricular"]
+}
+
+// ------------------------------------------------------------------
+// Enums
+// ------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  ACADEMIC_COORDINATOR
+  TUTOR
+  ANALYST
+  VIEWER
+  STUDENT
+
+  @@schema("curricular")
+}
+
+enum AnalysisStatus {
+  UPLOADED
+  PARSING
+  AI_EXTRACTION
+  NORMALIZING
+  CALCULATING
+  VALIDATING
+  AI_AUDIT
+  WAITING_REVIEW
+  COMPLETED
+  FAILED
+  AI_ERROR
+
+  @@schema("curricular")
+}
+
+enum SubjectStatus {
+  EXEMPTED
+  PENDING
+  REVIEW
+
+  @@schema("curricular")
+}
+
+enum Readability {
+  CLEAR
+  UNCLEAR
+  UNREADABLE
+
+  @@schema("curricular")
+}
+
+enum SubjectOrigin {
+  AI
+  USER
+
+  @@schema("curricular")
+}
+
+enum EntryPeriodSource {
+  DOCUMENT
+  STRUCTURED
+  RULE
+  USER
+
+  @@schema("curricular")
+}
+
+enum ReliabilityLevel {
+  HIGH
+  REVIEW_RECOMMENDED
+  REVIEW_REQUIRED
+
+  @@schema("curricular")
+}
+
+enum ProjectionSubjectKind {
+  REGULAR
+  BACKLOG
+
+  @@schema("curricular")
+}
+
+enum WarningSeverity {
+  INFO
+  WARNING
+  CRITICAL
+
+  @@schema("curricular")
+}
+
+enum WarningSource {
+  PIPELINE
+  VALIDATOR
+  AUDITOR
+  EXTRACTION
+
+  @@schema("curricular")
+}
+
+enum AIOperation {
+  DOCUMENT_EXTRACTION
+  CURRICULUM_EXTRACTION
+  AUDIT
+  FINAL_EXPLANATION
+  CONNECTION_TEST
+
+  @@schema("curricular")
+}
+
+/**
+ * Retorno do consultor sobre a matrícula do aluno após a análise.
+ */
+enum EnrollmentStatus {
+  PENDING
+  ENROLLED
+  NOT_ENROLLED
+
+  @@schema("curricular")
+}
+
+/**
+ * Frequência individual dos resumos de retornos de matrícula.
+ */
+enum FollowUpCadence {
+  ONCE_DAILY
+  TWICE_DAILY
+
+  @@schema("curricular")
+}
+
+enum CourseFormat {
+  EAD_DIGITAL
+  SEMIPRESENCIAL
+
+  @@schema("curricular")
+}
+
+enum AIReviewStatus {
+  OK
+  REVIEW
+
+  @@schema("curricular")
+}
+
+enum IntegrationStatus {
+  DISCONNECTED
+  CONNECTED
+  ERROR
+
+  @@schema("curricular")
+}
+
+enum RuleStatus {
+  CONFIRMED
+  CONFIGURABLE
+  NOT_CONFIGURED
+
+  @@schema("curricular")
+}
+
+enum RetentionPolicy {
+  DAYS_30
+  DAYS_90
+  DAYS_180
+  INDEFINITE
+  DELETE_AFTER_PROCESSING
+
+  @@schema("curricular")
+}
+
+enum AIPrivacyMode {
+  PDF_FILE
+  REDACTED_TEXT
+
+  @@schema("curricular")
+}
+
+enum DeletionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@schema("curricular")
+}
+
+enum AcademicGridReviewStatus {
+  NO_PENDING
+  CAN_ADD
+  NEAR_LIMIT
+  LIMIT_REACHED
+  MANUAL_REVIEW_REQUIRED
+
+  @@schema("curricular")
+}
+
+// ------------------------------------------------------------------
+// Identidade e acesso
+// ------------------------------------------------------------------
+
+model User {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId                 String           @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id                             String           @id @default(uuid()) @db.Uuid
+  /**
+   * Usuário do Supabase Auth (auth.users.id).
+   */
+  authUserId                     String           @db.Uuid
+  email                          String
+  name                           String
+  role                           Role             @default(ANALYST)
+  isActive                       Boolean          @default(true)
+  /**
+   * Unidade de atendimento do tutor (código cadastrado pela empresa); alunos herdam a unidade do seu responsável.
+   */
+  poloCode                       String?
+  /**
+   * WhatsApp do tutor exibido aos alunos (apenas dígitos, com DDI).
+   */
+  phone                          String?
+  /**
+   * Canais individuais para lembretes de retorno de matrícula. Pelo menos um permanece ativo.
+   */
+  followUpEmailEnabled           Boolean          @default(true)
+  followUpPushEnabled            Boolean          @default(true)
+  followUpRepeatBusinessDays     Int              @default(1)
+  followUpMaxReminders           Int              @default(5)
+  /**
+   * Janela individual para receber lembretes; nula = usar o padrão da instituição.
+   */
+  followUpBusinessStartHour      Int?
+  followUpBusinessEndHour        Int?
+  /**
+   * Nulo enquanto o usuário ainda não confirmou como deseja receber avisos.
+   */
+  followUpCadence                FollowUpCadence?
+  followUpPreferencesConfirmedAt DateTime?        @db.Timestamptz(6)
+  lastLoginAt                    DateTime?        @db.Timestamptz(6)
+  /**
+   * Última atividade com sessão válida (atualizada com throttle pelo callback de sessão).
+   */
+  lastActiveAt                   DateTime?        @db.Timestamptz(6)
+  createdAt                      DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt                      DateTime         @updatedAt @db.Timestamptz(6)
+
+  analyses                 CurricularAnalysis[]      @relation("AnalysisCreatedBy")
+  manualCorrections        ManualCorrection[]
+  auditLogs                AuditLog[]
+  resolvedWarnings         AnalysisWarning[]         @relation("WarningResolvedBy")
+  ruleSetsCreated          RuleSetVersion[]
+  integrationsUpdated      OpenAIIntegration[]       @relation("IntegrationUpdatedBy")
+  integrationsCreated      OpenAIIntegration[]       @relation("IntegrationCreatedBy")
+  deletionRequests         AnalysisDeletionRequest[] @relation("DeletionRequestedBy")
+  deletionRequestsReviewed AnalysisDeletionRequest[] @relation("DeletionReviewedBy")
+  studentDeletionRequests  StudentDeletionRequest[]  @relation("StudentDeletionRequestedBy")
+  studentDeletionReviews   StudentDeletionRequest[]  @relation("StudentDeletionReviewedBy")
+  enrollmentUpdates        CurricularAnalysis[]      @relation("EnrollmentUpdatedBy")
+  pushSubscriptions        PushSubscription[]
+  commercialGrades         CommercialGrade[]
+  academicGridReviews      AcademicGridReview[]
+  academicGridCorrections  AcademicGridCorrection[]
+  studentEnrollments       StudentEnrollment[]       @relation("StudentAccount")
+  managedStudents          StudentEnrollment[]       @relation("StudentOwner")
+  academicVersions         AcademicAnalysisVersion[]
+  academicSources          AcademicAnalysisSource[]
+  academicRequests         AcademicRequest[]
+
+  @@unique([organizationId, authUserId])
+  @@unique([organizationId, email])
+  @@schema("curricular")
+}
+
+/// Token de uso único para definir (convite) ou redefinir a senha por link de e-mail. Só o hash é armazenado.
+
+/// Token de uso único (60 s) para o ADMIN entrar na conta de outro usuário ("Acessar como").
+
+model AuditLog {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId String   @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String?  @db.Uuid
+  action         String
+  entityType     String
+  entityId       String?
+  metadata       Json?
+  ip             String?
+  userAgent      String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+// ------------------------------------------------------------------
+// Análise curricular
+// ------------------------------------------------------------------
+
+model CurricularAnalysis {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId            String             @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id                        String             @id @default(uuid()) @db.Uuid
+  status                    AnalysisStatus     @default(UPLOADED)
+  createdById               String             @db.Uuid
+  courseName                String?
+  matrixLabel               String?
+  campus                    String?
+  modality                  String?
+  candidateLabel            String?
+  /**
+   * Informados pelo analista no envio (obrigatórios; nulos apenas em registros legados).
+   */
+  studentName               String?
+  poloCode                  String?
+  poloName                  String?
+  courseFormat              CourseFormat?
+  /**
+   * Reanálise: aponta para a análise anterior do mesmo aluno (novo PDF obrigatório).
+   */
+  reanalysisOfId            String?            @db.Uuid
+  /**
+   * Retorno de matrícula: cobrado 24h após a entrega (followUpDueAt) por push + e-mail.
+   */
+  enrollmentStatus          EnrollmentStatus   @default(PENDING)
+  enrollmentUpdatedAt       DateTime?          @db.Timestamptz(6)
+  enrollmentUpdatedById     String?            @db.Uuid
+  enrollmentNote            String?
+  /**
+   * Quando a não-matrícula gerou reanálise, uma nova confirmação vence em 24h.
+   */
+  enrollmentReanalysisAt    DateTime?          @db.Timestamptz(6)
+  followUpDueAt             DateTime?          @db.Timestamptz(6)
+  followUpNotifiedAt        DateTime?          @db.Timestamptz(6)
+  followUpNotificationCount Int                @default(0)
+  entryPeriod               Int?
+  entryPeriodSource         EntryPeriodSource?
+  entryTerm                 String?
+  startTerm                 String
+  reliability               ReliabilityLevel?
+  reviewItemsCount          Int                @default(0)
+  processingSteps           Json               @default("[]")
+  errorCode                 String?
+  errorMessage              String?
+  ruleSetVersionId          String             @db.Uuid
+  engineVersion             String
+  extractorPromptVersion    String?
+  auditorPromptVersion      String?
+  extractionModel           String?
+  auditModel                String?
+  projectionIncomplete      Boolean            @default(false)
+  completedAt               DateTime?          @db.Timestamptz(6)
+  lastCalculatedAt          DateTime?          @db.Timestamptz(6)
+  createdAt                 DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt                 DateTime           @updatedAt @db.Timestamptz(6)
+
+  createdBy           User                      @relation("AnalysisCreatedBy", fields: [createdById], references: [id])
+  enrollmentUpdatedBy User?                     @relation("EnrollmentUpdatedBy", fields: [enrollmentUpdatedById], references: [id], onDelete: SetNull)
+  reanalysisOf        CurricularAnalysis?       @relation("Reanalysis", fields: [reanalysisOfId], references: [id], onDelete: SetNull)
+  reanalyses          CurricularAnalysis[]      @relation("Reanalysis")
+  ruleSetVersion      RuleSetVersion            @relation(fields: [ruleSetVersionId], references: [id])
+  document            UploadedDocument?
+  subjects            AnalyzedSubject[]
+  projections         SemesterProjection[]
+  claims              DocumentClaim[]
+  warnings            AnalysisWarning[]
+  corrections         ManualCorrection[]
+  extractions         AIExtraction[]
+  reviews             AIReview[]
+  usages              AIUsage[]
+  deletionRequests    AnalysisDeletionRequest[]
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([createdById])
+  @@index([poloCode])
+  @@index([enrollmentStatus, followUpDueAt])
+  @@index([reanalysisOfId])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+/**
+ * Inscrição Web Push de um navegador do usuário (notificações de retorno de matrícula).
+ */
+model PushSubscription {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId String    @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  endpoint       String    @unique
+  p256dh         String
+  auth           String
+  userAgent      String?
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
+  lastUsedAt     DateTime? @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+/**
+ * Solicitação de exclusão feita pelo responsável pela análise e decidida por um administrador.
+ */
+model AnalysisDeletionRequest {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId String                @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id             String                @id @default(uuid()) @db.Uuid
+  analysisId     String                @db.Uuid
+  requestedById  String                @db.Uuid
+  status         DeletionRequestStatus @default(PENDING)
+  reason         String?
+  reviewedById   String?               @db.Uuid
+  reviewedAt     DateTime?             @db.Timestamptz(6)
+  decisionNote   String?
+  createdAt      DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime              @updatedAt @db.Timestamptz(6)
+
+  analysis    CurricularAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  requestedBy User               @relation("DeletionRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  reviewedBy  User?              @relation("DeletionReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([analysisId, requestedById, status])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+model UploadedDocument {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId  String    @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id              String    @id @default(uuid()) @db.Uuid
+  analysisId      String    @unique @db.Uuid
+  originalName    String
+  storageKey      String
+  sizeBytes       Int
+  sha256          String
+  pageCount       Int?
+  mimeType        String
+  localExtraction Json?
+  deleteAfter     DateTime? @db.Timestamptz(6)
+  deletedAt       DateTime? @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+
+  analysis CurricularAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([deleteAfter])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+model AnalyzedSubject {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId String        @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id             String        @id @default(uuid()) @db.Uuid
+  analysisId     String        @db.Uuid
+  rowHash        String
+  code           String?
+  name           String
+  workload       Int
+  period         Int
+  usedSubject    String?
+  status         SubjectStatus
+  readability    Readability   @default(CLEAR)
+  sourcePage     Int
+  sourceRow      Int
+  bbox           Json?
+  origin         SubjectOrigin @default(AI)
+  note           String?
+  sortIndex      Int
+  createdAt      DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime      @updatedAt @db.Timestamptz(6)
+
+  analysis    CurricularAnalysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  projections ProjectionSubject[]
+  corrections ManualCorrection[]
+  warnings    AnalysisWarning[]
+
+  @@unique([analysisId, rowHash])
+  @@index([analysisId, period, sortIndex])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+model SemesterProjection {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId        String   @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id                    String   @id @default(uuid()) @db.Uuid
+  analysisId            String   @db.Uuid
+  index                 Int
+  term                  String
+  periodNumber          Int?
+  isAdditional          Boolean  @default(false)
+  subjectsInPeriod      Int
+  exemptedInPeriod      Int
+  regularSubjectsToTake Int
+  maximumCapacity       Int
+  backlogCapacity       Int
+  subjectsFromBacklog   Int
+  semesterLoad          Int
+  remainingBacklog      Int
+  createdAt             DateTime @default(now()) @db.Timestamptz(6)
+
+  analysis CurricularAnalysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  subjects ProjectionSubject[]
+
+  @@unique([analysisId, index])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+model ProjectionSubject {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId String                @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id             String                @id @default(uuid()) @db.Uuid
+  projectionId   String                @db.Uuid
+  subjectId      String                @db.Uuid
+  kind           ProjectionSubjectKind
+  order          Int
+
+  projection SemesterProjection @relation(fields: [projectionId], references: [id], onDelete: Cascade)
+  subject    AnalyzedSubject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectionId, subjectId])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+model DocumentClaim {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId  String   @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id              String   @id @default(uuid()) @db.Uuid
+  analysisId      String   @db.Uuid
+  type            String
+  value           Float?
+  sourcePage      Int
+  rawText         String?
+  calculatedValue Float?
+  matches         Boolean?
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+
+  analysis CurricularAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+model AnalysisWarning {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId String          @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id             String          @id @default(uuid()) @db.Uuid
+  analysisId     String          @db.Uuid
+  code           String
+  severity       WarningSeverity
+  source         WarningSource
+  message        String
+  subjectId      String?         @db.Uuid
+  sourcePage     Int?
+  /// Dados estruturados para ações na UI (ex.: valores local × IA, linha local não extraída).
+  data           Json?
+  resolvedAt     DateTime?       @db.Timestamptz(6)
+  resolvedById   String?         @db.Uuid
+  createdAt      DateTime        @default(now()) @db.Timestamptz(6)
+
+  analysis   CurricularAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  subject    AnalyzedSubject?   @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  resolvedBy User?              @relation("WarningResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([analysisId, resolvedAt])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+model ManualCorrection {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId String   @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id             String   @id @default(uuid()) @db.Uuid
+  analysisId     String   @db.Uuid
+  subjectId      String?  @db.Uuid
+  userId         String   @db.Uuid
+  field          String
+  previousValue  String?
+  newValue       String?
+  reason         String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  analysis CurricularAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  subject  AnalyzedSubject?   @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  user     User               @relation(fields: [userId], references: [id])
+
+  @@index([analysisId, createdAt(sort: Desc)])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+// ------------------------------------------------------------------
+// IA
+// ------------------------------------------------------------------
+
+model AIExtraction {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId String        @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id             String        @id @default(uuid()) @db.Uuid
+  analysisId     String        @db.Uuid
+  model          String
+  promptVersion  String
+  privacyMode    AIPrivacyMode
+  rawOutput      Json?
+  durationMs     Int
+  status         String
+  errorCode      String?
+  createdAt      DateTime      @default(now()) @db.Timestamptz(6)
+
+  analysis CurricularAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+model AIReview {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId String         @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id             String         @id @default(uuid()) @db.Uuid
+  analysisId     String         @db.Uuid
+  model          String
+  promptVersion  String
+  status         AIReviewStatus
+  issues         Json
+  durationMs     Int
+  createdAt      DateTime       @default(now()) @db.Timestamptz(6)
+
+  analysis CurricularAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+model AIUsage {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId String      @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id             String      @id @default(uuid()) @db.Uuid
+  analysisId     String?     @db.Uuid
+  operation      AIOperation
+  model          String
+  inputTokens    Int
+  outputTokens   Int
+  totalTokens    Int
+  estimatedCost  Decimal     @db.Decimal(12, 6)
+  createdAt      DateTime    @default(now()) @db.Timestamptz(6)
+
+  analysis CurricularAnalysis? @relation(fields: [analysisId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([analysisId])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+model OpenAIIntegration {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId         String            @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id                     String            @id @default(uuid()) @db.Uuid
+  status                 IntegrationStatus @default(DISCONNECTED)
+  encryptedApiKey        String?
+  encryptionIv           String?
+  encryptionAuthTag      String?
+  keyVersion             Int?
+  apiKeyLastFour         String?
+  extractionModel        String            @default("gpt-5.6-sol")
+  auditModel             String            @default("gpt-5.6-sol")
+  futureExplanationModel String?
+  projectLabel           String?
+  serviceAccountLabel    String?
+  lastTestedAt           DateTime?         @db.Timestamptz(6)
+  lastConnectionStatus   String?
+  lastErrorCode          String?
+  createdById            String?           @db.Uuid
+  updatedById            String?           @db.Uuid
+  createdAt              DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime          @updatedAt @db.Timestamptz(6)
+
+  createdBy User? @relation("IntegrationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("IntegrationUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId])
+  @@schema("curricular")
+}
+
+// ------------------------------------------------------------------
+// Regras e configurações
+// ------------------------------------------------------------------
+
+model RuleSetVersion {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId String   @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id             String   @id @default(uuid()) @db.Uuid
+  version        String
+  isActive       Boolean  @default(false)
+  effectiveFrom  DateTime @default(now()) @db.Timestamptz(6)
+  notes          String?
+  createdById    String?  @db.Uuid
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  createdBy User?                @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  rules     SystemRule[]
+  analyses  CurricularAnalysis[]
+
+  @@unique([organizationId, version])
+  @@schema("curricular")
+}
+
+model SystemRule {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId   String     @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id               String     @id @default(uuid()) @db.Uuid
+  ruleSetVersionId String     @db.Uuid
+  key              String
+  valueType        String
+  value            Json
+  status           RuleStatus
+  description      String
+
+  ruleSetVersion RuleSetVersion @relation(fields: [ruleSetVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([ruleSetVersionId, key])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+model SystemSetting {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId String   @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  key            String
+  value          Json
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+
+  @@id([organizationId, key])
+  @@schema("curricular")
+}
+
+/**
+ * Grade curricular em PDF disponibilizada ao time comercial.
+ */
+model CommercialGrade {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId       String   @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id                   String   @id @default(uuid()) @db.Uuid
+  courseName           String
+  modality             String?
+  curriculumTerm       String?
+  /**
+   * Grau acadêmico principal identificado na matriz (ex.: Bacharelado, Licenciatura ou Área básica).
+   */
+  degree               String?
+  /**
+   * Área de conhecimento identificada para facilitar a busca comercial.
+   */
+  knowledgeArea        String?
+  /**
+   * Duração total da matriz em semestres.
+   */
+  durationSemesters    Int?
+  /**
+   * Trilhas/formações possíveis dentro da mesma matriz, incluindo o período de escolha quando explícito.
+   */
+  courseTracks         Json?
+  /**
+   * SHA-256 do PDF: evita que o mesmo arquivo seja publicado mais de uma vez.
+   */
+  contentHash          String?  @db.Char(64)
+  /**
+   * Assinatura do curso/modalidade/vigência: evita duplicar a mesma matriz por engano.
+   */
+  catalogKey           String?  @db.Char(64)
+  internshipInfo       String?
+  hasTcc               Boolean  @default(false)
+  totalInternshipHours Int?
+  totalCourseHours     Int?
+  /**
+   * Texto pronto para o comercial copiar e enviar ao candidato no WhatsApp.
+   */
+  whatsappSummary      String?
+  originalName         String
+  storageKey           String   @unique
+  sizeBytes            Int
+  uploadedById         String   @db.Uuid
+  createdAt            DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime @updatedAt @db.Timestamptz(6)
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, contentHash])
+  @@unique([organizationId, catalogKey])
+  @@index([uploadedById])
+  @@index([courseName])
+  @@index([degree])
+  @@index([knowledgeArea])
+  @@index([durationSemesters])
+  @@index([createdAt(sort: Desc)])
+  @@schema("curricular")
+}
+
+/**
+ * Análise acadêmica independente do fluxo de aproveitamento curricular comercial.
+ */
+model AcademicGridReview {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId         String                   @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id                     String                   @id @default(uuid()) @db.Uuid
+  createdById            String                   @db.Uuid
+  studentName            String?
+  rgm                    String?
+  courseName             String?
+  currentPeriod          Int?
+  currentPeriodRaw       String?
+  currentPeriodConfirmed Boolean                  @default(false)
+  sourceFilename         String
+  sourceSha256           String                   @db.Char(64)
+  sourcePageCount        Int
+  status                 AcademicGridReviewStatus @default(MANUAL_REVIEW_REQUIRED)
+  snapshot               Json
+  createdAt              DateTime                 @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime                 @updatedAt @db.Timestamptz(6)
+  completedAt            DateTime?                @db.Timestamptz(6)
+
+  createdBy    User                      @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  corrections  AcademicGridCorrection[]
+  enrollmentId String?                   @db.Uuid
+  enrollment   StudentEnrollment?        @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  versions     AcademicAnalysisVersion[]
+
+  @@index([enrollmentId])
+  @@index([createdById, createdAt(sort: Desc)])
+  @@index([rgm, createdAt(sort: Desc)])
+  @@index([studentName, createdAt(sort: Desc)])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+/**
+ * Histórico append-only das correções feitas no módulo acadêmico.
+ */
+model AcademicGridCorrection {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId  String   @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id              String   @id @default(uuid()) @db.Uuid
+  reviewId        String   @db.Uuid
+  userId          String   @db.Uuid
+  disciplineIndex Int?
+  field           String
+  previousValue   Json?
+  newValue        Json?
+  reason          String?
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+
+  review AcademicGridReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([reviewId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+/// Auth.js remains the identity provider. An account may own multiple enrollments.
+model StudentEnrollment {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId   String    @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id               String    @id @default(uuid()) @db.Uuid
+  rgm              String
+  name             String
+  courseName       String?
+  studentUserId    String?   @db.Uuid
+  ownerId          String    @db.Uuid
+  /// Polo do aluno: vem do tutor que liberou o acesso ou é confirmado uma única vez pelo aluno.
+  poloCode         String?
+  currentVersionId String?   @unique @db.Uuid
+  welcomedAt       DateTime? @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @db.Timestamptz(6)
+
+  studentUser      User?                     @relation("StudentAccount", fields: [studentUserId], references: [id], onDelete: Restrict)
+  owner            User                      @relation("StudentOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  currentVersion   AcademicAnalysisVersion?  @relation("CurrentAcademicVersion", fields: [currentVersionId], references: [id], onDelete: Restrict)
+  versions         AcademicAnalysisVersion[] @relation("EnrollmentVersions")
+  reviews          AcademicGridReview[]
+  sources          AcademicAnalysisSource[]
+  deletionRequests StudentDeletionRequest[]
+
+  @@unique([organizationId, rgm])
+  @@index([studentUserId])
+  @@index([ownerId, createdAt(sort: Desc)])
+  @@schema("curricular")
+}
+
+/// Pedido do tutor para excluir um aluno; Administrador ou Coordenação acadêmica decide.
+/// Nome e RGM ficam guardados para o histórico continuar legível depois da exclusão.
+model StudentDeletionRequest {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId String                @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id             String                @id @default(uuid()) @db.Uuid
+  enrollmentId   String?               @db.Uuid
+  studentName    String
+  rgm            String
+  requestedById  String                @db.Uuid
+  reason         String?
+  status         DeletionRequestStatus @default(PENDING)
+  reviewedById   String?               @db.Uuid
+  reviewedAt     DateTime?             @db.Timestamptz(6)
+  decisionNote   String?
+  createdAt      DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime              @updatedAt @db.Timestamptz(6)
+
+  enrollment  StudentEnrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  requestedBy User               @relation("StudentDeletionRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  reviewedBy  User?              @relation("StudentDeletionReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([enrollmentId, status])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+/// Immutable published snapshots; the existing review is the tutor's workspace.
+model AcademicAnalysisVersion {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId       String                  @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id                   String                  @id @default(uuid()) @db.Uuid
+  enrollmentId         String                  @db.Uuid
+  reviewId             String                  @db.Uuid
+  version              Int
+  previousVersionId    String?                 @db.Uuid
+  preferredSourceId    String?                 @db.Uuid
+  preferredSource      AcademicAnalysisSource? @relation("PreferredAcademicSource", fields: [preferredSourceId], references: [id], onDelete: SetNull)
+  academicSnapshotHash String                  @db.Char(64)
+  snapshot             Json
+  actorUserId          String                  @db.Uuid
+  actorRole            Role
+  origin               String
+  changeSummary        Json
+  createdAt            DateTime                @default(now()) @db.Timestamptz(6)
+
+  enrollment      StudentEnrollment         @relation("EnrollmentVersions", fields: [enrollmentId], references: [id], onDelete: Restrict)
+  currentFor      StudentEnrollment?        @relation("CurrentAcademicVersion")
+  review          AcademicGridReview        @relation(fields: [reviewId], references: [id], onDelete: Restrict)
+  actor           User                      @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  previousVersion AcademicAnalysisVersion?  @relation("AcademicVersionChain", fields: [previousVersionId], references: [id], onDelete: Restrict)
+  nextVersions    AcademicAnalysisVersion[] @relation("AcademicVersionChain")
+  sources         AcademicAnalysisSource[]
+
+  @@unique([enrollmentId, version])
+  @@index([preferredSourceId])
+  @@index([enrollmentId, createdAt(sort: Desc)])
+  @@index([reviewId])
+  @@index([actorUserId])
+  @@index([previousVersionId])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+/// Persistent upload job and per-enrollment document cache. No cross-student reuse.
+model AcademicAnalysisSource {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId        String                    @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id                    String                    @id @default(uuid()) @db.Uuid
+  enrollmentId          String                    @db.Uuid
+  sourceFileHash        String                    @db.Char(64)
+  documentType          AcademicDocumentType      @default(CURRICULAR_EXTRACT)
+  parsedSnapshot        Json?
+  parserName            String?
+  validationResult      String?
+  preferredFor          AcademicAnalysisVersion[] @relation("PreferredAcademicSource")
+  requests              AcademicRequest[]
+  normalizedContentHash String?                   @db.Char(64)
+  deleteAfter           DateTime?                 @db.Timestamptz(6)
+  deletedAt             DateTime?                 @db.Timestamptz(6)
+  storageKey            String?
+  filename              String
+  status                String                    @default("PROCESSING")
+  stage                 String                    @default("Processando extrato")
+  actorUserId           String                    @db.Uuid
+  actorRole             Role
+  versionId             String?                   @db.Uuid
+  errorMessage          String?
+  reused                Boolean                   @default(false)
+  attempts              Int                       @default(1)
+  createdAt             DateTime                  @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime                  @updatedAt @db.Timestamptz(6)
+
+  enrollment StudentEnrollment        @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  actor      User                     @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  version    AcademicAnalysisVersion? @relation(fields: [versionId], references: [id], onDelete: Restrict)
+
+  @@unique([enrollmentId, sourceFileHash])
+  @@index([enrollmentId, normalizedContentHash, status])
+  @@index([enrollmentId, createdAt(sort: Desc)])
+  @@index([actorUserId])
+  @@index([versionId])
+  @@index([deleteAfter])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+enum AcademicDocumentType {
+  OFFICIAL_ACADEMIC_HISTORY
+  SIMPLE_ACADEMIC_HISTORY
+  CURRICULAR_EXTRACT
+  UNKNOWN_ACADEMIC_DOCUMENT
+
+  @@schema("curricular")
+}
+
+enum AcademicRequestStatus {
+  RECEIVED
+  PROCESSING
+  UNDER_REVIEW
+  WAITING_NEW_DOCUMENT
+  NO_CHANGES
+  COMPLETED
+  REJECTED
+  FAILED
+
+  @@schema("curricular")
+}
+
+/// One immutable document reference per submission attempt. Reprocessing is a new attempt.
+model AcademicRequest {
+  /**
+   * Empresa dona do registro; preenchida pelo cliente Prisma por empresa ou herdada do registro pai.
+   */
+  organizationId    String                 @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  id                String                 @id @default(uuid()) @db.Uuid
+  protocol          Int                    @unique @default(autoincrement())
+  sourceDocumentId  String                 @db.Uuid
+  attempt           Int                    @default(1)
+  previousRequestId String?                @db.Uuid
+  status            AcademicRequestStatus  @default(RECEIVED)
+  actorUserId       String                 @db.Uuid
+  actorRole         Role
+  result            String?
+  aiUsed            Boolean                @default(false)
+  createdVersion    Boolean                @default(false)
+  createdAt         DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime               @updatedAt @db.Timestamptz(6)
+  sourceDocument    AcademicAnalysisSource @relation(fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+  actor             User                   @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  previousRequest   AcademicRequest?       @relation("RequestAttempts", fields: [previousRequestId], references: [id], onDelete: SetNull)
+  nextRequests      AcademicRequest[]      @relation("RequestAttempts")
+
+  @@unique([sourceDocumentId, attempt])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([actorUserId])
+  @@index([previousRequestId])
+  @@index([organizationId])
+  @@schema("curricular")
+}
+
+// ------------------------------------------------------------------
+// Uso da equipe (painel do gestor). Só equipe: alunos e "Acessar como" não entram.
+// Guarda apenas o padrão da rota (ex.: /analyses/[id]) — nunca IDs, buscas ou dados de alunos.
+// ------------------------------------------------------------------
+
+
+
+
+
