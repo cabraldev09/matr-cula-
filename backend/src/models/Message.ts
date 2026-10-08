@@ -12,9 +12,16 @@ import {
 } from "sequelize-typescript";
 import Contact from "./Contact";
 import Ticket from "./Ticket";
+import { sign } from "jsonwebtoken";
+import authConfig from "../config/auth";
+
+interface MessageCreation {
+  id: string; ticketId: number; body: string;
+  contactId?: number; fromMe?: boolean; read?: boolean; mediaType?: string; mediaUrl?: string; ack?: number; quotedMsgId?: string;
+}
 
 @Table
-class Message extends Model<Message> {
+class Message extends Model<Message, MessageCreation> {
   @PrimaryKey
   @Column
   id: string;
@@ -36,10 +43,14 @@ class Message extends Model<Message> {
 
   @Column(DataType.STRING)
   get mediaUrl(): string | null {
-    if (this.getDataValue("mediaUrl")) {
+    const filename = this.getDataValue("mediaUrl");
+    if (filename) {
+      const mediaToken = sign({ scope: "media", filename }, authConfig.secret, {
+        algorithm: "HS256", expiresIn: "5m"
+      });
       return `${process.env.BACKEND_URL}:${
         process.env.PROXY_PORT
-      }/public/${this.getDataValue("mediaUrl")}`;
+      }/public/${encodeURIComponent(filename)}?mediaToken=${encodeURIComponent(mediaToken)}`;
     }
     return null;
   }

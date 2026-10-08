@@ -16,8 +16,13 @@ import UserQueue from "./UserQueue";
 import Whatsapp from "./Whatsapp";
 import WhatsappQueue from "./WhatsappQueue";
 
+interface QueueCreation {
+  name: string; color: string;
+  greetingMessage?: string;
+}
+
 @Table
-class Queue extends Model<Queue> {
+class Queue extends Model<Queue, QueueCreation> {
   @PrimaryKey
   @AutoIncrement
   @Column

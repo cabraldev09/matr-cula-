@@ -9,8 +9,13 @@ import {
   AutoIncrement
 } from "sequelize-typescript";
 
+interface QuickAnswerCreation {
+  shortcut: string; message: string;
+
+}
+
 @Table
-class QuickAnswer extends Model<QuickAnswer> {
+class QuickAnswer extends Model<QuickAnswer, QuickAnswerCreation> {
   @PrimaryKey
   @AutoIncrement
   @Column

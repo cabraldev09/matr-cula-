@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getIO } from "../libs/socket";
+import { emitTicketEvent } from "../libs/socket";
 
 import CreateTicketService from "../services/TicketServices/CreateTicketService";
 import DeleteTicketService from "../services/TicketServices/DeleteTicketService";
@@ -8,6 +8,8 @@ import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
+import AppError from "../errors/AppError";
+import ShowUserService from "../services/UserServices/ShowUserService";
 import formatBody from "../helpers/Mustache";
 
 type IndexQuery = {
@@ -43,7 +45,10 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   let queueIds: number[] = [];
 
   if (queueIdsStringified) {
-    queueIds = JSON.parse(queueIdsStringified);
+    try {
+      queueIds = JSON.parse(queueIdsStringified);
+      if (!Array.isArray(queueIds) || queueIds.some(id => !Number.isSafeInteger(id) || id <= 0)) throw new Error();
+    } catch { throw new AppError("ERR_INVALID_QUEUE_IDS", 400); }
   }
 
   const { tickets, count, hasMore } = await ListTicketsService({
@@ -61,15 +66,12 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-  const { contactId, status, userId }: TicketData = req.body;
+  const { contactId, status }: TicketData = req.body;
+  const userId = req.user.profile === "admin" ? (req.body.userId || Number(req.user.id)) : Number(req.user.id);
 
   const ticket = await CreateTicketService({ contactId, status, userId });
 
-  const io = getIO();
-  io.to(ticket.status).emit("ticket", {
-    action: "update",
-    ticket
-  });
+  await emitTicketEvent("ticket", { action: "update", ticket }, ticket);
 
   return res.status(200).json(ticket);
 };
@@ -88,6 +90,15 @@ export const update = async (
 ): Promise<Response> => {
   const { ticketId } = req.params;
   const ticketData: TicketData = req.body;
+  if (req.user.profile !== "admin") {
+    const actor = await ShowUserService(req.user.id);
+    if (ticketData.userId !== undefined && ticketData.userId !== null && ticketData.userId !== Number(req.user.id)) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+    if (ticketData.queueId !== undefined && ticketData.queueId !== null && !actor.queues.some(queue => queue.id === ticketData.queueId)) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+  }
 
   const { ticket } = await UpdateTicketService({
     ticketData,
@@ -118,11 +129,7 @@ export const remove = async (
 
   const ticket = await DeleteTicketService(ticketId);
 
-  const io = getIO();
-  io.to(ticket.status).to(ticketId).to("notification").emit("ticket", {
-    action: "delete",
-    ticketId: +ticketId
-  });
+  await emitTicketEvent("ticket", { action: "delete", ticketId: +ticketId }, ticket);
 
   return res.status(200).json({ message: "ticket deleted" });
 };

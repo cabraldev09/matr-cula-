@@ -11,8 +11,13 @@ import {
 } from "sequelize-typescript";
 import Contact from "./Contact";
 
+interface ContactCustomFieldCreation {
+  contactId: number; name: string; value: string;
+  id?: number;
+}
+
 @Table
-class ContactCustomField extends Model<ContactCustomField> {
+class ContactCustomField extends Model<ContactCustomField, ContactCustomFieldCreation> {
   @PrimaryKey
   @AutoIncrement
   @Column

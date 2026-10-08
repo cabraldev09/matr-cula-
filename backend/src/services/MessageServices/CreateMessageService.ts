@@ -1,4 +1,4 @@
-import { getIO } from "../../libs/socket";
+import { emitTicketEvent } from "../../libs/socket";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import Whatsapp from "../../models/Whatsapp";
@@ -52,16 +52,9 @@ const CreateMessageService = async ({
     throw new Error("ERR_CREATING_MESSAGE");
   }
 
-  const io = getIO();
-  io.to(message.ticketId.toString())
-    .to(message.ticket.status)
-    .to("notification")
-    .emit("appMessage", {
-      action: "create",
-      message,
-      ticket: message.ticket,
-      contact: message.ticket.contact
-    });
+  await emitTicketEvent("appMessage", {
+    action: "create", message, ticket: message.ticket, contact: message.ticket.contact
+  }, message.ticket);
 
   return message;
 };

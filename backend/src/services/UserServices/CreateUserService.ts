@@ -25,10 +25,11 @@ const CreateUserService = async ({
   password,
   name,
   queueIds = [],
-  profile = "admin",
+  profile = "user",
   whatsappId
 }: Request): Promise<Response> => {
   const schema = Yup.object().shape({
+    profile: Yup.string().oneOf(["admin", "user"]).required(),
     name: Yup.string().required().min(2),
     email: Yup.string()
       .email()
@@ -48,7 +49,7 @@ const CreateUserService = async ({
   });
 
   try {
-    await schema.validate({ email, password, name });
+    await schema.validate({ email, password, name, profile });
   } catch (err) {
     throw new AppError(err.message);
   }

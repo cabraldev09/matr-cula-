@@ -21,8 +21,13 @@ import Queue from "./Queue";
 import UserQueue from "./UserQueue";
 import Whatsapp from "./Whatsapp";
 
+interface UserCreation {
+  name: string; email: string; password: string;
+  profile?: string; whatsappId?: number | null;
+}
+
 @Table
-class User extends Model<User> {
+class User extends Model<User, UserCreation> {
   @PrimaryKey
   @AutoIncrement
   @Column
@@ -44,13 +49,13 @@ class User extends Model<User> {
   @Column
   tokenVersion: number;
 
-  @Default("admin")
+  @Default("user")
   @Column
   profile: string;
 
   @ForeignKey(() => Whatsapp)
-  @Column
-  whatsappId: number;
+  @Column(DataType.INTEGER)
+  whatsappId: number | null;
 
   @BelongsTo(() => Whatsapp)
   whatsapp: Whatsapp;

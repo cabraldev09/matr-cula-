@@ -34,7 +34,7 @@ const UpdateUserService = async ({
   const schema = Yup.object().shape({
     name: Yup.string().min(2),
     email: Yup.string().email(),
-    profile: Yup.string(),
+    profile: Yup.string().oneOf(["admin", "user"]),
     password: Yup.string()
   });
 

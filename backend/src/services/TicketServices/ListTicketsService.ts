@@ -103,7 +103,7 @@ const ListTicketsService = async ({
         },
         { "$contact.number$": { [Op.like]: `%${sanitizedSearchParam}%` } },
         {
-          "$message.body$": where(
+          "$messages.body$": where(
             fn("LOWER", col("body")),
             "LIKE",
             `%${sanitizedSearchParam}%`
@@ -129,6 +129,17 @@ const ListTicketsService = async ({
       [Op.or]: [{ userId }, { status: "pending" }],
       queueId: { [Op.or]: [userQueueIds, null] },
       unreadMessages: { [Op.gt]: 0 }
+    };
+  }
+
+  // Always apply authorization last so date/search/showAll cannot replace it.
+  const actor = await ShowUserService(userId);
+  if (actor.profile !== "admin") {
+    whereCondition = {
+      [Op.and]: [whereCondition, {
+        queueId: { [Op.or]: [actor.queues.map(queue => queue.id), null] },
+        [Op.or]: [{ userId: actor.id }, { userId: null }]
+      }]
     };
   }
 

@@ -4,6 +4,7 @@ import {
   CreatedAt,
   UpdatedAt,
   Model,
+  DataType,
   PrimaryKey,
   ForeignKey,
   BelongsTo,
@@ -18,8 +19,13 @@ import Queue from "./Queue";
 import User from "./User";
 import Whatsapp from "./Whatsapp";
 
+interface TicketCreation {
+  contactId: number; status: string;
+  userId?: number | null; queueId?: number | null; whatsappId?: number; unreadMessages?: number; isGroup?: boolean;
+}
+
 @Table
-class Ticket extends Model<Ticket> {
+class Ticket extends Model<Ticket, TicketCreation> {
   @PrimaryKey
   @AutoIncrement
   @Column
@@ -45,8 +51,8 @@ class Ticket extends Model<Ticket> {
   updatedAt: Date;
 
   @ForeignKey(() => User)
-  @Column
-  userId: number;
+  @Column(DataType.INTEGER)
+  userId: number | null;
 
   @BelongsTo(() => User)
   user: User;
@@ -66,8 +72,8 @@ class Ticket extends Model<Ticket> {
   whatsapp: Whatsapp;
 
   @ForeignKey(() => Queue)
-  @Column
-  queueId: number;
+  @Column(DataType.INTEGER)
+  queueId: number | null;
 
   @BelongsTo(() => Queue)
   queue: Queue;

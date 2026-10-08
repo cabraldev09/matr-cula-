@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 
 import AppError from "../errors/AppError";
 import authConfig from "../config/auth";
+import ShowUserService from "../services/UserServices/ShowUserService";
 
 interface TokenPayload {
   id: string;
@@ -10,9 +11,10 @@ interface TokenPayload {
   profile: string;
   iat: number;
   exp: number;
+  tokenVersion: number;
 }
 
-const isAuth = (req: Request, res: Response, next: NextFunction): void => {
+const isAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -23,11 +25,13 @@ const isAuth = (req: Request, res: Response, next: NextFunction): void => {
 
   try {
     const decoded = verify(token, authConfig.secret);
-    const { id, profile } = decoded as TokenPayload;
+    const { id, tokenVersion } = decoded as TokenPayload;
+    const currentUser = await ShowUserService(id);
+    if (tokenVersion !== currentUser.tokenVersion) throw new Error("Revoked session");
 
     req.user = {
       id,
-      profile
+      profile: currentUser.profile
     };
   } catch (err) {
     throw new AppError(

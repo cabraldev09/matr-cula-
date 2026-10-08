@@ -1,4 +1,4 @@
-import { getIO } from "../libs/socket";
+import { emitTicketEvent } from "../libs/socket";
 import Message from "../models/Message";
 import Ticket from "../models/Ticket";
 import { logger } from "../utils/logger";
@@ -30,11 +30,7 @@ const SetTicketMessagesAsRead = async (ticket: Ticket): Promise<void> => {
     );
   }
 
-  const io = getIO();
-  io.to(ticket.status).to("notification").emit("ticket", {
-    action: "updateUnread",
-    ticketId: ticket.id
-  });
+  await emitTicketEvent("ticket", { action: "updateUnread", ticketId: ticket.id }, ticket);
 };
 
 export default SetTicketMessagesAsRead;

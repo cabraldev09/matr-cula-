@@ -1,4 +1,4 @@
-import { Sequelize } from "sequelize";
+import { Sequelize, Op } from "sequelize";
 import QuickAnswer from "../../models/QuickAnswer";
 
 interface Request {
@@ -17,7 +17,7 @@ const ListQuickAnswerService = async ({
   pageNumber = "1"
 }: Request): Promise<Response> => {
   const whereCondition = {
-    message: Sequelize.where(
+    [Op.and]: Sequelize.where(
       Sequelize.fn("LOWER", Sequelize.col("message")),
       "LIKE",
       `%${searchParam.toLowerCase().trim()}%`

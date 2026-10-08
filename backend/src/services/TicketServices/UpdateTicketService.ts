@@ -1,6 +1,6 @@
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import SetTicketMessagesAsRead from "../../helpers/SetTicketMessagesAsRead";
-import { getIO } from "../../libs/socket";
+import { emitTicketEvent } from "../../libs/socket";
 import Ticket from "../../models/Ticket";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
@@ -38,6 +38,7 @@ const UpdateTicketService = async ({
   }
 
   const oldStatus = ticket.status;
+  const oldQueueId = ticket.queueId;
   const oldUserId = ticket.user?.id;
 
   if (oldStatus === "closed") {
@@ -58,22 +59,12 @@ const UpdateTicketService = async ({
 
   await ticket.reload();
 
-  const io = getIO();
-
   if (ticket.status !== oldStatus || ticket.user?.id !== oldUserId) {
-    io.to(oldStatus).emit("ticket", {
-      action: "delete",
-      ticketId: ticket.id
+    await emitTicketEvent("ticket", { action: "delete", ticketId: ticket.id }, {
+      userId: oldUserId ?? null, queueId: oldQueueId
     });
   }
-
-  io.to(ticket.status)
-    .to("notification")
-    .to(ticketId.toString())
-    .emit("ticket", {
-      action: "update",
-      ticket
-    });
+  await emitTicketEvent("ticket", { action: "update", ticket }, ticket);
 
   return { ticket, oldStatus, oldUserId };
 };

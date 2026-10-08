@@ -3,7 +3,7 @@ import { promisify } from "util";
 import { writeFile } from "fs";
 import * as Sentry from "@sentry/node";
 
-import { getIO } from "../libs/socket";
+import { emitTicketEvent } from "../libs/socket";
 import { logger } from "../utils/logger";
 import { debounce } from "../helpers/Debounce";
 import formatBody from "../helpers/Mustache";
@@ -326,12 +326,11 @@ export const handleMessageAck = async (
 ): Promise<void> => {
   await new Promise(r => setTimeout(r, 500));
 
-  const io = getIO();
-
   try {
     const messageToUpdate = await Message.findByPk(messageId, {
       include: [
         "contact",
+        "ticket",
         {
           model: Message,
           as: "quotedMsg",
@@ -346,10 +345,7 @@ export const handleMessageAck = async (
 
     await messageToUpdate.update({ ack });
 
-    io.to(messageToUpdate.ticketId.toString()).emit("appMessage", {
-      action: "update",
-      message: messageToUpdate
-    });
+    await emitTicketEvent("appMessage", { action: "update", message: messageToUpdate }, messageToUpdate.ticket);
   } catch (err) {
     Sentry.captureException(err);
     logger.error(`Error handling message ack: ${err}`);

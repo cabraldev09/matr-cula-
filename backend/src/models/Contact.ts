@@ -14,8 +14,13 @@ import {
 import ContactCustomField from "./ContactCustomField";
 import Ticket from "./Ticket";
 
+interface ContactCreation {
+  name: string; number?: string | null;
+  lid?: string; email?: string; profilePicUrl?: string; isGroup?: boolean; extraInfo?: Array<{name: string; value: string}>;
+}
+
 @Table
-class Contact extends Model<Contact> {
+class Contact extends Model<Contact, ContactCreation> {
   @PrimaryKey
   @AutoIncrement
   @Column

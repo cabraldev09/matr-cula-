@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
-import { getIO } from "../libs/socket";
+import { emitTicketEvent } from "../libs/socket";
 import Message from "../models/Message";
 
 import ListMessagesService from "../services/MessageServices/ListMessagesService";
@@ -65,11 +65,8 @@ export const remove = async (
 
   const message = await DeleteWhatsAppMessage(messageId);
 
-  const io = getIO();
-  io.to(message.ticketId.toString()).emit("appMessage", {
-    action: "update",
-    message
-  });
+  const ticket = await ShowTicketService(message.ticketId);
+  await emitTicketEvent("appMessage", { action: "update", message }, ticket);
 
   return res.send();
 };
