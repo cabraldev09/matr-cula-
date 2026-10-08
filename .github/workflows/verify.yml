@@ -1,0 +1,27 @@
+name: Build and tenant isolation
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            frontend/package-lock.json
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.111.0
+      - run: npm ci
+      - run: npm ci --prefix backend
+      - run: npm ci --prefix frontend
+      - run: npm run build
+      - run: supabase start --exclude logflare,vector,edge-runtime,supavisor > /tmp/whaticket-supabase-start.log 2>&1
+      - run: npm test
+      - run: supabase db advisors --local --type security --level warn --fail-on warn

@@ -1,43 +1,44 @@
-import { defineConfig } from "vite";
+import { defineConfig, transformWithOxc } from "vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [
+    {
+      name: "community-jsx-in-js",
+      enforce: "pre",
+      transform(code, id) {
+        if (/\/src\/.*\.js$/.test(id)) {
+          return transformWithOxc(code, id.replace(/\.js$/, ".jsx"), {
+            jsx: { runtime: "classic" },
+          });
+        }
+      },
+    },
     react({
       jsxRuntime: "classic",
     }),
   ],
   server: {
-    port: 3000,
-    open: true,
+    host: "::",
+    port: 3002,
+    strictPort: true,
+    open: false,
   },
   build: {
     outDir: "build",
     sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          "material-ui": [
-            "@material-ui/core",
-            "@material-ui/icons",
-            "@material-ui/lab",
-          ],
-        },
-      },
-    },
   },
   envPrefix: "VITE_",
-  esbuild: {
-    loader: "jsx",
+  oxc: {
     include: /src\/.*\.[jt]sx?$/,
-    exclude: [],
+    jsx: { runtime: "classic" },
   },
   define: {
     global: "globalThis",
   },
   optimizeDeps: {
-    esbuildOptions: {
-      loader: {
+    rolldownOptions: {
+      moduleTypes: {
         ".js": "jsx",
       },
     },

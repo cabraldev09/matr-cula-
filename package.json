@@ -1,0 +1,20 @@
+{
+  "name": "whaticket-saas-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "npm --prefix backend run build && npm --prefix frontend run build",
+    "dev": "node scripts/dev.mjs",
+    "stop": "node scripts/dev.mjs --stop",
+    "test": "npm --prefix backend run build && node --test tests/*.test.mjs",
+    "test:e2e": "playwright test",
+    "db:sync": "supabase db schema declarative sync --no-apply",
+    "db:migrate": "supabase migration up --local",
+    "db:advisors": "supabase db advisors --local --type security --level warn",
+    "types": "supabase gen types --local --schema public > frontend/src/saas/database.types.ts",
+    "migration:inspect": "node scripts/community-snapshot.mjs",
+    "messaging": "node services/messaging/server.mjs"
+  },
+  "devDependencies": { "@playwright/test": "1.64.0" }
+}

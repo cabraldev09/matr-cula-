@@ -4,3 +4,9 @@ ssl/
 .wwebjs_auth
 .wwebjs_cache
 .idea
+.local/
+services/messaging/.env
+
+/node_modules/
+/test-results/
+/playwright-report/

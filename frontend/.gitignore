@@ -23,6 +23,9 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
+
 yarn.lock
 
+
+# Supabase na nuvem (usado por "npm run dev:cloud" via frontend/.env.cloud, ignorado pelo git)
+.env.cloud
