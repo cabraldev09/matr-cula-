@@ -74,6 +74,21 @@ test("CRM: immediate leads, qualification, proposals and enrollment fee", async 
       assert.equal(ok(await agent.client.from("leads").select("id").eq("organization_id", org)).length, 1);
     });
 
+    await t.test("catalog prefixes such as 'CST em' are ignored when detecting the course", async () => {
+      const tech = ok(
+        await owner.client
+          .from("courses")
+          .insert({ organization_id: org, name: "Cst Em Análise E Desenvolvimento De Sistemas", modality: "EAD - Graduação", semesters: 4, gross_monthly_cents: 75630, default_first_monthly_cents: 14528 })
+          .select()
+          .single()
+      );
+      await simulate(owner, channel, "Quero fazer Análise e Desenvolvimento de Sistemas!", "5569991110099");
+      const other = ok(await agent.client.from("leads").select("id, course_id, contacts!inner(phone)").eq("organization_id", org).eq("contacts.phone", "5569991110099").single());
+      assert.equal(other.course_id, tech.id);
+      ok(await owner.client.from("leads").delete().eq("id", other.id));
+      ok(await owner.client.from("courses").delete().eq("id", tech.id));
+    });
+
     await t.test("qualification answers raise the score and stage changes are logged", async () => {
       ok(
         await agent.client

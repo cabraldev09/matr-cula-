@@ -30,7 +30,6 @@ type Track = {
 type CopyWhatsappProps = {
   text: string;
   /** Grade de origem, para o painel de uso da equipe. */
-  gradeId?: string;
   courseName?: string;
   hasTcc?: boolean;
   totalCourseHours?: number | null;
@@ -39,7 +38,6 @@ type CopyWhatsappProps = {
 
 export function CopyWhatsapp({
   text,
-  gradeId,
   courseName,
   hasTcc,
   totalCourseHours,

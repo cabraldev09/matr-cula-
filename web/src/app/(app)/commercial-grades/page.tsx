@@ -19,7 +19,6 @@ import { CommercialGradeCatalogFilters } from "@/features/commercial-grades/cata
 import { CommercialGradeCatalogSearch } from "@/features/commercial-grades/catalog-search";
 import { ManageCommercialGradeButtons } from "@/features/commercial-grades/manage-grade-buttons";
 import { formatDateTime } from "@/lib/time";
-import Link from "next/link";
 import {
   normalizeCatalogMetadata,
   parseCourseTracks,
@@ -282,7 +281,6 @@ function CommercialGradeCard({
           {whatsapp && (
             <CopyWhatsapp
               text={whatsapp}
-              gradeId={grade.id}
               courseName={grade.courseName}
               hasTcc={grade.hasTcc}
               totalCourseHours={grade.totalCourseHours}

@@ -1,78 +1,291 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BarChart3, FileSearch, GraduationCap, MessagesSquare, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, BarChart3, CheckCircle2, FileText, Globe, Camera, GraduationCap, KanbanSquare, MessageCircle, QrCode, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { getSessionContext } from "@/lib/session";
 import { BRAND } from "@/lib/brand";
 import { SiteHeader } from "@/features/marketing/site-header";
 import { PublicPlans } from "@/features/marketing/public-plans";
+import { BrowserFrame, Counter, FeatureTabs, Reveal, type FeatureTab } from "@/features/marketing/effects";
 
-export const metadata: Metadata = { title: { absolute: `${BRAND.name} · ${BRAND.tagline}` } };
+export const metadata: Metadata = {
+  title: { absolute: `${BRAND.name} · CRM de matrículas para polos de ensino superior` },
+  description: "Lead do WhatsApp direto no funil, proposta de bolsa em PDF, taxa de matrícula por Pix ou link e análise curricular no mesmo sistema.",
+};
 export const dynamic = "force-dynamic";
 
-const FEATURES = [
-  { icon: MessagesSquare, title: "Atendimento em equipe", text: "Caixa de entrada compartilhada, departamentos, respostas rápidas, notas internas e anexos privados." },
-  { icon: FileSearch, title: "Análise curricular", text: "Envie o histórico em PDF e receba grade, dispensas, pendências e previsão de conclusão, conferidas por regras e por IA." },
-  { icon: GraduationCap, title: "Portal do aluno", text: "Cada aluno acompanha a própria análise e envia documentos pelo endereço da sua instituição." },
-  { icon: BarChart3, title: "Relatórios", text: "Tempo de primeira resposta, conversas por atendente, análises por curso e conversão em matrícula." },
-  { icon: Users, title: "Sua equipe, suas regras", text: "Convide pessoas, defina papéis e departamentos. Cada empresa tem um espaço só seu." },
-  { icon: ShieldCheck, title: "Dados isolados", text: "Uma empresa nunca vê dados de outra: o próprio banco de dados impõe essa separação." },
+const CHANNELS = [
+  { icon: MessageCircle, title: "WhatsApp oficial", text: "Conecte o número do polo pela API oficial da Meta. Cada mensagem nova vira lead no funil na mesma hora.", tone: "bg-emerald-50 text-emerald-600" },
+  { icon: Globe, title: "Cadastro pela equipe", text: "Lead que chegou por telefone, indicação ou visita? A consultora cadastra em segundos e ele entra no mesmo funil.", tone: "bg-sky-50 text-sky-600" },
+  { icon: Camera, title: "Instagram Direct", text: "Em breve: mensagens do Instagram do polo no mesmo funil de matrículas.", tone: "bg-pink-50 text-pink-600", soon: true },
+];
+
+const FEATURES: FeatureTab[] = [
+  { title: "CRM de matrículas", text: "Funil em colunas do primeiro contato até a matrícula. O curso de interesse é reconhecido na mensagem e cada lead recebe uma nota de 0 a 100: quente, morno ou frio.", image: "/site/crm.webp", alt: "Funil de matrículas com leads por etapa" },
+  { title: "Proposta de bolsa em PDF", text: "Escolha o curso e a bolsa: a proposta sai com faixas de pontualidade e projeção de mensalidade por semestre, com a logo do seu polo. Envie o link pelo WhatsApp.", image: "/site/proposta.webp", alt: "Proposta de bolsa com projeção por semestre" },
+  { title: "Taxa de matrícula", text: "Cobre a taxa por Pix copia-e-cola com a chave do polo ou por link de pagamento Efí (Pix, boleto e cartão). Pagamento confirmado move o lead para \"Taxa paga\".", image: "/site/crm-lead.webp", alt: "Painel do lead com proposta e cobrança da taxa" },
+  { title: "Atendimento em equipe", text: "Caixa de entrada compartilhada, departamentos, respostas rápidas, notas internas e anexos. Na conversa você já vê a etapa e a temperatura do lead.", image: "/site/atendimento.webp", alt: "Caixa de entrada com conversa do WhatsApp" },
+  { title: "Relatórios de gestão", text: "Leads por etapa, curso e origem, conversão em taxa paga, taxas recebidas e tempo de primeira resposta da equipe.", image: "/site/relatorios.webp", alt: "Relatórios do funil e do atendimento" },
+];
+
+const MARQUEE = ["Funil kanban", "Lead automático do WhatsApp", "Proposta de bolsa em PDF", "Pix copia-e-cola", "Link de pagamento Efí", "Análise de histórico escolar", "Portal do aluno", "Grades comerciais", "Respostas rápidas", "Relatórios de conversão", "Equipe com papéis", "Dados isolados por polo"];
+
+const NUMBERS = [
+  { value: 8, suffix: " etapas", label: "no funil, do novo lead à matrícula" },
+  { value: 3, suffix: " formas", label: "de pagar a taxa: Pix, boleto ou cartão" },
+  { value: 100, suffix: "%", label: "dos dados separados por polo, garantido pelo banco" },
+  { value: 7, suffix: " dias", label: "de teste grátis, sem cartão" },
+];
+
+const FAQ = [
+  ["Preciso instalar alguma coisa?", "Não. O sistema roda no navegador, no computador ou no celular. Você cria a conta, escolhe o plano e já começa com um espaço vazio e só seu."],
+  ["Como o lead entra no CRM?", "Assim que alguém manda mensagem para o WhatsApp do polo, o contato vira um lead na coluna \"Novo lead\". Se o curso aparece na mensagem, ele já fica marcado."],
+  ["A proposta de bolsa segue o modelo da instituição?", "Sim. Os valores vêm da sua tabela de cursos e as regras (pontualidade, bolsa por semestre, reajustes) são editáveis. O PDF sai com a logo que você escolher."],
+  ["Para onde vai o dinheiro da taxa de matrícula?", "Direto para a conta do polo. Pelo Pix copia-e-cola a equipe confirma o recebimento; pelo link Efí a confirmação é automática."],
+  ["Posso usar a logo da Cruzeiro do Sul na proposta?", "Polos parceiros autorizados encontram o modelo pronto nas configurações. Também é possível enviar a sua própria logo."],
+  ["Consigo trocar de plano ou cancelar?", "Sim, a qualquer momento, pela área Plano e faturas. O pagamento da assinatura é por boleto, Pix ou cartão."],
 ];
 
 export default async function LandingPage() {
   const context = await getSessionContext();
   return (
-    <div className="min-h-screen bg-[#f7faff]">
+    <div className="min-h-screen overflow-x-clip bg-[#f7faff] text-slate-900">
       <SiteHeader loggedIn={Boolean(context)} />
-      <section className="relative overflow-hidden bg-brand-navy text-white">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_80%_0%,rgba(56,182,245,.45),transparent_55%),radial-gradient(ellipse_at_0%_100%,rgba(254,248,76,.12),transparent_50%)]" />
-        <div className="relative mx-auto grid max-w-6xl gap-10 px-4 pb-20 pt-16 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:pb-28 lg:pt-24">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-gold">Para escolas, polos e equipes de matrícula</p>
-            <h1 className="mt-4 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">
-              Atenda, analise o histórico e matricule. Tudo no mesmo sistema.
-            </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-white/80 sm:text-lg">
-              {BRAND.name} junta o atendimento da equipe e a análise curricular automática para você responder rápido e mostrar ao candidato quanto falta para se formar.
+
+      {/* Hero */}
+      <section className="relative">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-[radial-gradient(ellipse_at_85%_10%,rgba(56,182,245,.22),transparent_55%),radial-gradient(ellipse_at_5%_60%,rgba(254,248,76,.18),transparent_45%)]" />
+        <div className="relative mx-auto grid max-w-6xl gap-10 px-4 pb-10 pt-14 sm:px-6 lg:grid-cols-[1.35fr_1fr] lg:items-center lg:pt-20">
+          <div className="animate-blur-fade">
+            <p className="inline-flex items-center gap-2 rounded-full border border-brand-cyan/30 bg-white px-3 py-1 text-xs font-semibold text-brand-navy shadow-sm">
+              <GraduationCap className="size-4 text-brand-cyan" /> Feito para polos de ensino superior
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/cadastro" className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-brand-navy shadow-lg">Testar grátis</Link>
-              <Link href="/planos" className="rounded-xl border border-white/30 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">Ver planos</Link>
+            <h1 className="mt-5 text-4xl font-bold leading-[1.08] tracking-tight text-brand-navy sm:text-6xl">
+              Do primeiro “oi”
+              <span className="mx-1 inline-block -rotate-1 rounded-2xl bg-brand-cyan px-3 py-0.5 text-white shadow-lg shadow-brand-cyan/30 sm:mx-2">à matrícula</span>
+              no mesmo sistema
+            </h1>
+            <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
+              CRM de matrículas com WhatsApp: o lead entra no funil na hora, recebe a proposta de bolsa em PDF e paga a taxa de matrícula por Pix ou link.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link href="/cadastro" className="group inline-flex items-center gap-2 rounded-full bg-brand-navy px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-navy/25 transition-transform hover:-translate-y-0.5">
+                Testar grátis <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              <Link href="/planos" className="rounded-full px-5 py-3 text-sm font-semibold text-brand-navy hover:bg-white">Ver planos</Link>
+              <span className="flex items-center gap-1.5 text-xs text-slate-500"><BadgeCheck className="size-4 text-emerald-500" /> 7 dias grátis, sem cartão</span>
             </div>
           </div>
-          <div aria-hidden="true" className="relative hidden lg:block">
-            <div className="rounded-3xl border border-white/15 bg-white/10 p-4 shadow-2xl backdrop-blur">
-              <div className="rounded-2xl bg-white p-4 text-slate-800">
-                <div className="flex items-center justify-between text-sm"><span className="font-semibold">Maria Souza</span><span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-700">Em atendimento</span></div>
-                <p className="mt-3 max-w-[80%] rounded-2xl bg-slate-100 px-3 py-2 text-sm">Oi! Já fiz parte do curso em outra faculdade. Quanto tempo falta?</p>
-                <p className="ml-auto mt-2 max-w-[80%] rounded-2xl bg-sky-50 px-3 py-2 text-sm">Analisei seu histórico: 14 disciplinas dispensadas. Previsão de conclusão: 2028.1 🎓</p>
+          <div aria-hidden="true" className="relative mx-auto hidden h-72 w-full max-w-sm lg:block">
+            <div className="absolute inset-6 overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-brand-navy to-brand-cyan p-6 opacity-95">
+              <div className="mt-14 grid h-[calc(100%-3.5rem)] grid-cols-3 gap-2">
+                {[[70, 45, 30], [55, 35], [40]].map((bars, col) => (
+                  <div key={col} className="flex flex-col gap-2 rounded-xl bg-white/10 p-2">
+                    <span className="h-1.5 w-8 rounded-full bg-white/50" />
+                    {bars.map((w, i) => <span key={i} className="h-7 rounded-lg bg-white/85" style={{ width: `${w + 30}%` }} />)}
+                  </div>
+                ))}
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-3 text-center text-white">
-                <div className="rounded-2xl bg-white/10 p-3"><p className="text-2xl font-semibold">14</p><p className="text-xs text-white/70">dispensadas</p></div>
-                <div className="rounded-2xl bg-white/10 p-3"><p className="text-2xl font-semibold">22</p><p className="text-xs text-white/70">pendentes</p></div>
-                <div className="rounded-2xl bg-white/10 p-3"><p className="text-2xl font-semibold">2028.1</p><p className="text-xs text-white/70">conclusão</p></div>
-              </div>
+            </div>
+            <div className="absolute left-0 top-6 animate-float rounded-2xl bg-white p-3 text-sm shadow-xl">
+              <p className="font-semibold">Larissa Mendes</p>
+              <p className="text-slate-500">“Quero Biomedicina, tem bolsa?”</p>
+            </div>
+            <div className="absolute -right-4 top-24 animate-float rounded-2xl bg-white px-4 py-3 text-sm shadow-xl [animation-delay:1.5s]">
+              <p className="text-xs text-slate-500">Proposta nº 128</p>
+              <p className="font-semibold text-brand-navy">Bolsa de 69,77%</p>
+            </div>
+            <div className="absolute bottom-2 left-8 animate-float rounded-2xl bg-white px-4 py-3 text-sm shadow-xl [animation-delay:3s]">
+              <p className="flex items-center gap-1.5 font-semibold text-emerald-600"><CheckCircle2 className="size-4" /> Taxa paga</p>
+              <p className="text-xs text-slate-500">R$ 99,00 via Pix</p>
+            </div>
+            <div className="absolute -bottom-3 right-4 flex gap-2">
+              {[MessageCircle, Camera, QrCode].map((Icon, i) => (
+                <span key={i} className="grid size-10 place-items-center rounded-full bg-white text-brand-navy shadow-lg"><Icon className="size-5" /></span>
+              ))}
             </div>
           </div>
         </div>
+        {/* Tela do produto sobre faixa colorida */}
+        <div className="relative mt-6">
+          <div aria-hidden="true" className="absolute inset-x-0 bottom-0 top-1/3 bg-gradient-to-b from-brand-navy-50 to-[#dceefe]" />
+          <Reveal className="relative mx-auto max-w-5xl px-4 sm:px-6">
+            <BrowserFrame>
+              {/* eslint-disable-next-line @next/next/no-img-element -- captura estática gerada por script */}
+              <img src="/site/crm.webp" alt="Funil de matrículas do Matrícula+ com leads por etapa" width={1600} height={1000} className="block h-auto w-full" />
+            </BrowserFrame>
+            <span className="absolute -left-1 top-1/3 hidden animate-float items-center gap-2 rounded-full bg-brand-navy px-4 py-2 text-sm font-semibold text-white shadow-xl sm:inline-flex">
+              <Sparkles className="size-4 text-brand-gold" /> Lead qualificado automaticamente
+            </span>
+          </Reveal>
+        </div>
       </section>
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map(({ icon: Icon, title, text }) => (
-            <article key={title} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <Icon className="size-6 text-brand-cyan" />
-              <h2 className="mt-4 font-semibold text-slate-900">{title}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
-            </article>
+
+      {/* Faixa de recursos */}
+      <div className="border-y border-slate-200 bg-white py-4" aria-label="Recursos">
+        <div className="flex overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_10%,#000_90%,transparent)]">
+          <ul className="flex w-max shrink-0 animate-marquee gap-10 pr-10 text-sm font-semibold text-slate-500">
+            {[...MARQUEE, ...MARQUEE].map((item, i) => (
+              <li key={i} aria-hidden={i >= MARQUEE.length} className="flex items-center gap-2 whitespace-nowrap"><span className="size-1.5 rounded-full bg-brand-cyan" /> {item}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* Canais */}
+      <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+        <Reveal>
+          <h2 className="mx-auto max-w-2xl text-center text-3xl font-bold tracking-tight text-brand-navy sm:text-4xl">Sua equipe e seus leads, finalmente no mesmo lugar</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-center text-slate-600">Chega de lead perdido no celular da consultora. Toda conversa fica no sistema do polo, com histórico, responsável e etapa.</p>
+        </Reveal>
+        <div className="mt-12 grid items-center gap-10 lg:grid-cols-2">
+          <Reveal className="relative order-2 lg:order-1">
+            <div aria-hidden="true" className="absolute -inset-4 -z-10 rounded-[2.5rem] bg-gradient-to-tr from-emerald-100 via-sky-100 to-transparent blur-xl" />
+            <BrowserFrame>
+              {/* eslint-disable-next-line @next/next/no-img-element -- captura estática gerada por script */}
+              <img src="/site/atendimento.webp" alt="Conversa do WhatsApp com a etapa do lead" width={1600} height={1000} loading="lazy" className="block h-auto w-full" />
+            </BrowserFrame>
+          </Reveal>
+          <ul className="order-1 space-y-4 lg:order-2">
+            {CHANNELS.map(({ icon: Icon, title, text, tone, soon }, i) => (
+              <Reveal as="li" key={title} delay={i * 120} className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <span className={`grid size-12 shrink-0 place-items-center rounded-2xl ${tone}`}><Icon className="size-6" /></span>
+                <span>
+                  <span className="flex items-center gap-2 font-semibold text-slate-900">
+                    {title} {soon && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">em breve</span>}
+                  </span>
+                  <span className="mt-1 block text-sm leading-6 text-slate-600">{text}</span>
+                </span>
+              </Reveal>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* O que fazemos */}
+      <section id="solucoes" className="scroll-mt-20 bg-gradient-to-b from-white to-[#eef6ff] py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <Reveal>
+            <p className="text-center text-sm font-semibold uppercase tracking-[0.2em] text-brand-cyan">O que fazemos</p>
+            <h2 className="mx-auto mt-2 max-w-2xl text-center text-3xl font-bold tracking-tight text-brand-navy sm:text-4xl">Tudo o que a equipe de matrícula precisa, sem planilha</h2>
+          </Reveal>
+          <Reveal className="mt-12"><FeatureTabs items={FEATURES} /></Reveal>
+        </div>
+      </section>
+
+      {/* Faixa WhatsApp oficial */}
+      <section className="px-4 py-16 sm:px-6">
+        <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-brand-navy px-6 py-12 text-white sm:px-12">
+          <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_90%_0%,rgba(56,182,245,.55),transparent_50%),radial-gradient(ellipse_at_0%_100%,rgba(254,248,76,.18),transparent_45%)]" />
+          <div className="relative grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-center">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">WhatsApp oficial para o seu polo</h2>
+              <p className="mt-3 max-w-xl text-white/80">Conecte o número pela API oficial da Meta: mais estabilidade, vários atendentes no mesmo número e mensagens registradas no sistema.</p>
+              <Link href="/cadastro" className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-brand-navy shadow-lg transition-transform hover:-translate-y-0.5">
+                Começar agora <ArrowRight className="size-4" />
+              </Link>
+            </div>
+            <ul className="grid gap-3 text-sm">
+              {["Vários atendentes no mesmo número", "Lead criado a cada nova conversa", "Respostas rápidas e notas internas", "Proposta enviada pelo próprio chat"].map((item) => (
+                <li key={item} className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-3 backdrop-blur"><CheckCircle2 className="size-4 text-brand-gold" /> {item}</li>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
+      </section>
+
+      {/* Números */}
+      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {NUMBERS.map((n, i) => (
+            <Reveal key={n.label} delay={i * 100} className="rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+              <p className="text-4xl font-bold tracking-tight text-brand-navy"><Counter value={n.value} suffix={n.suffix} /></p>
+              <p className="mt-2 text-sm text-slate-600">{n.label}</p>
+            </Reveal>
           ))}
         </div>
       </section>
-      <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
-        <h2 className="text-3xl font-semibold tracking-tight text-slate-900">Planos</h2>
-        <p className="mt-2 text-slate-600">Contrate só o que precisa. Troque de plano ou cancele quando quiser.</p>
-        <div className="mt-8"><PublicPlans /></div>
+
+      {/* Feito para polos */}
+      <section id="polos" className="scroll-mt-20 mx-auto max-w-6xl px-4 py-20 sm:px-6">
+        <div className="grid items-center gap-12 lg:grid-cols-2">
+          <Reveal>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-cyan">Feito para polos</p>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-brand-navy sm:text-4xl">A proposta de bolsa que o aluno entende, pronta em segundos</h2>
+            <p className="mt-4 text-slate-600">Cadastre a tabela de cursos do polo uma vez. Depois é só escolher o curso: mensalidade, bolsa, pontualidade e projeção por semestre saem calculadas, no padrão da instituição.</p>
+            <ul className="mt-6 space-y-3 text-sm text-slate-700">
+              {[
+                [FileText, "PDF e link público com a logo do polo"],
+                [KanbanSquare, "Lead vai para \"Proposta enviada\" sozinho"],
+                [QrCode, "Taxa de matrícula por Pix ou link de pagamento"],
+                [BarChart3, "Análise curricular para quem já estudou: dispensas e previsão de conclusão"],
+                [Users, "Cada polo com sua equipe, sua conta e seus dados"],
+                [ShieldCheck, "Um polo nunca vê os dados de outro"],
+              ].map(([Icon, text]) => {
+                const I = Icon as typeof FileText;
+                return <li key={text as string} className="flex items-start gap-3"><I className="mt-0.5 size-5 shrink-0 text-brand-cyan" /> {text as string}</li>;
+              })}
+            </ul>
+          </Reveal>
+          <Reveal delay={150} className="relative">
+            <div aria-hidden="true" className="absolute -inset-6 -z-10 rotate-2 rounded-[2.5rem] bg-gradient-to-br from-brand-gold/30 via-sky-100 to-brand-cyan/20" />
+            <BrowserFrame>
+              {/* eslint-disable-next-line @next/next/no-img-element -- captura estática gerada por script */}
+              <img src="/site/proposta.webp" alt="Proposta de bolsa aberta pelo aluno" width={1600} height={1000} loading="lazy" className="block h-auto w-full" />
+            </BrowserFrame>
+          </Reveal>
+        </div>
       </section>
-      <footer className="border-t bg-white py-8 text-center text-sm text-slate-500">
-        © {BRAND.name}{BRAND.supportEmail ? ` · ${BRAND.supportEmail}` : ""}
+
+      {/* Planos */}
+      <section id="planos" className="scroll-mt-20 bg-white py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <Reveal>
+            <h2 className="text-center text-3xl font-bold tracking-tight text-brand-navy sm:text-4xl">Planos para cada tamanho de polo</h2>
+            <p className="mt-3 text-center text-slate-600">Contrate só o que precisa. Troque de plano ou cancele quando quiser.</p>
+          </Reveal>
+          <div className="mt-10"><PublicPlans /></div>
+        </div>
+      </section>
+
+      {/* Dúvidas */}
+      <section id="duvidas" className="scroll-mt-20 mx-auto max-w-3xl px-4 py-20 sm:px-6">
+        <Reveal><h2 className="text-center text-3xl font-bold tracking-tight text-brand-navy sm:text-4xl">Tire suas dúvidas sobre o {BRAND.name}</h2></Reveal>
+        <div className="mt-10 space-y-3">
+          {FAQ.map(([question, answer], i) => (
+            <Reveal key={question} delay={i * 60}>
+              <details className="group rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm open:shadow-md">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-slate-800 [&::-webkit-details-marker]:hidden">
+                  {question}
+                  <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-500 transition-transform group-open:rotate-45 group-open:bg-brand-cyan group-open:text-white">+</span>
+                </summary>
+                <p className="mt-3 text-sm leading-6 text-slate-600">{answer}</p>
+              </details>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA final */}
+      <section className="px-4 pb-20 sm:px-6">
+        <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-gradient-to-r from-brand-navy to-[#0a6db8] px-6 py-14 text-center text-white sm:px-12">
+          <div aria-hidden="true" className="absolute -right-20 -top-20 size-72 rounded-full bg-brand-cyan/40 blur-3xl" />
+          <h2 className="relative text-3xl font-bold tracking-tight sm:text-4xl">Pronto para matricular mais neste semestre?</h2>
+          <p className="relative mx-auto mt-3 max-w-xl text-white/80">Crie a conta do seu polo, importe a tabela de cursos e receba o primeiro lead hoje.</p>
+          <Link href="/cadastro" className="relative mt-8 inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-semibold text-brand-navy shadow-lg transition-transform hover:-translate-y-0.5">
+            Testar grátis por 7 dias <ArrowRight className="size-4" />
+          </Link>
+        </Reveal>
+      </section>
+
+      <footer className="border-t bg-white">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm text-slate-500 sm:flex-row sm:px-6">
+          <p>© {new Date().getFullYear()} {BRAND.name}{BRAND.supportEmail ? ` · ${BRAND.supportEmail}` : ""}</p>
+          <nav aria-label="Rodapé" className="flex gap-4">
+            <Link href="/planos" className="hover:text-brand-navy">Planos</Link>
+            <Link href="/login" className="hover:text-brand-navy">Entrar</Link>
+            <Link href="/cadastro" className="hover:text-brand-navy">Criar conta</Link>
+          </nav>
+        </div>
       </footer>
     </div>
   );

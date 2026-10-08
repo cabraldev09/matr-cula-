@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Download } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getSessionContext, getSessionUser } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +12,8 @@ import { can } from "@/lib/rbac";
 import { startOfCurrentMonth } from "@/lib/time";
 import { loadMembers } from "@/features/attendance/members";
 import type { Prisma } from "@/generated/prisma/client";
+import { STAGES } from "@/features/crm/labels";
+import { money } from "@/domain/proposal/document";
 
 export const metadata: Metadata = { title: "Relatórios" };
 export const dynamic = "force-dynamic";
@@ -135,6 +137,49 @@ async function attendanceReport(organizationId: string, from: Date) {
   };
 }
 
+const PROPOSAL_OR_LATER = new Set(["proposta", "taxa_paga", "matriculado"]);
+const PAID_OR_LATER = new Set(["taxa_paga", "matriculado"]);
+
+async function crmReport(organizationId: string, from: Date) {
+  const supabase = await createClient();
+  const since = from.toISOString();
+  const [{ data: leads }, { data: paid }, { data: courses }] = await Promise.all([
+    supabase.from("leads").select("stage, source, course_id").eq("organization_id", organizationId).gte("created_at", since).limit(10000),
+    supabase.from("enrollment_charges").select("amount_cents").eq("organization_id", organizationId).eq("status", "paid").gte("paid_at", since).limit(10000),
+    supabase.from("courses").select("id, name").eq("organization_id", organizationId),
+  ]);
+  const rows = leads ?? [];
+  const courseNames = new Map((courses ?? []).map((c) => [c.id as string, c.name as string]));
+  const byStage = new Map<string, number>();
+  const byCourse = new Map<string, number>();
+  const bySource = new Map<string, number>();
+  for (const lead of rows) {
+    const stage = STAGES.find((s) => s.key === lead.stage)?.label ?? lead.stage;
+    byStage.set(stage, (byStage.get(stage) ?? 0) + 1);
+    const course = lead.course_id ? (courseNames.get(lead.course_id) ?? "Curso removido") : "Curso não informado";
+    byCourse.set(course, (byCourse.get(course) ?? 0) + 1);
+    const source = lead.source === "whatsapp" ? "WhatsApp" : "Cadastro manual";
+    bySource.set(source, (bySource.get(source) ?? 0) + 1);
+  }
+  const proposals = rows.filter((l) => PROPOSAL_OR_LATER.has(l.stage)).length;
+  const paidLeads = rows.filter((l) => PAID_OR_LATER.has(l.stage)).length;
+  const enrolled = rows.filter((l) => l.stage === "matriculado").length;
+  const pct = (part: number) => (rows.length ? `${Math.round((part / rows.length) * 100)}%` : "—");
+  return {
+    total: rows.length,
+    proposals,
+    paidLeads,
+    enrolled,
+    lost: rows.filter((l) => l.stage === "perdido").length,
+    pct,
+    feesCents: (paid ?? []).reduce((sum, c) => sum + (c.amount_cents as number), 0),
+    feesCount: (paid ?? []).length,
+    byStage: STAGES.map((s) => [s.label, byStage.get(s.label) ?? 0] as [string, number]).filter(([, n]) => n > 0),
+    byCourse: top(byCourse),
+    bySource: top(bySource),
+  };
+}
+
 async function analysisReport(from: Date, scope: Prisma.CurricularAnalysisWhereInput) {
   const where: Prisma.CurricularAnalysisWhereInput = { ...scope, createdAt: { gte: from } };
   const [total, completed, enrolled, notEnrolled, byCourse, byUnit] = await Promise.all([
@@ -168,7 +213,8 @@ export default async function ReportsPage({ searchParams }: PageProps<"/relatori
   const modules = context.entitlements?.modules ?? [];
   const curricularUser = modules.includes("analise_curricular") ? await getSessionUser() : null;
   const teamWide = curricularUser ? can(curricularUser.role, "academic:all") : false;
-  const [attendance, analysis] = await Promise.all([
+  const [crm, attendance, analysis] = await Promise.all([
+    modules.includes("crm") ? crmReport(context.organization.organizationId, from) : Promise.resolve(null),
     modules.includes("atendimento") ? attendanceReport(context.organization.organizationId, from) : Promise.resolve(null),
     curricularUser && can(curricularUser.role, "analysis:read") ? analysisReport(from, teamWide ? {} : { createdById: curricularUser.id }) : Promise.resolve(null),
   ]);
@@ -178,7 +224,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/relatori
       <PageHeader
         eyebrow={context.organization.name}
         title="Relatórios"
-        description="Gestão do atendimento e da análise curricular no mesmo lugar."
+        description="Funil de matrículas, atendimento e análise curricular no mesmo lugar."
         actions={
           <form className="flex gap-2">
             <select name="periodo" defaultValue={period} className="h-9 rounded-md border bg-card px-2 text-sm" aria-label="Período">
@@ -188,10 +234,29 @@ export default async function ReportsPage({ searchParams }: PageProps<"/relatori
           </form>
         }
       />
-      {!attendance && !analysis && (
+      {!crm && !attendance && !analysis && (
         <p className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
           Nenhum módulo com relatórios no seu plano. <Link href="/conta/plano" className="underline">Ver planos</Link>
         </p>
+      )}
+      {crm && (
+        <section className="mb-10 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">Funil de matrículas</h2>
+            <Button asChild size="sm" variant="outline"><Link href="/crm">Abrir CRM</Link></Button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <Stat label="Leads no período" value={crm.total} hint={`${crm.lost} perdidos`} />
+            <Stat label="Receberam proposta" value={crm.proposals} hint={`${crm.pct(crm.proposals)} dos leads`} />
+            <Stat label="Taxa paga" value={crm.paidLeads} hint={`${crm.pct(crm.paidLeads)} dos leads · ${crm.enrolled} matriculados`} />
+            <Stat label="Taxas recebidas" value={money(crm.feesCents / 100)} hint={`${crm.feesCount} pagamento${crm.feesCount === 1 ? "" : "s"} confirmado${crm.feesCount === 1 ? "" : "s"}`} />
+          </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Ranking title="Leads por etapa atual" rows={crm.byStage} empty="Nenhum lead no período." />
+            <Ranking title="Leads por curso" rows={crm.byCourse} empty="Nenhum lead no período." />
+            <Ranking title="Leads por origem" rows={crm.bySource} empty="Nenhum lead no período." />
+          </div>
+        </section>
       )}
       {attendance && (
         <section className="mb-10 space-y-4">

@@ -1,6 +1,7 @@
 /** Módulos vendáveis. Os códigos espelham public.modules no banco. */
 export const MODULES = {
   atendimento: "Atendimento",
+  crm: "CRM de matrículas",
   analise_curricular: "Análise curricular",
   portal_aluno: "Portal do aluno",
   grades_comerciais: "Grades comerciais",
@@ -19,6 +20,7 @@ export function isModuleCode(value: string): value is ModuleCode {
 /** Prefixos de rota que exigem um módulo contratado. O primeiro que casar vale. */
 export const ROUTE_MODULES: { prefix: string; module: ModuleCode }[] = [
   { prefix: "/atendimento", module: "atendimento" },
+  { prefix: "/crm", module: "crm" },
   { prefix: "/academic-analysis/students", module: "portal_aluno" },
   { prefix: "/academic-analysis/requests", module: "portal_aluno" },
   { prefix: "/commercial-grades", module: "grades_comerciais" },

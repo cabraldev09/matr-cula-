@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Download, Loader2, Paperclip, Send } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Download, GraduationCap, Loader2, Paperclip, Send } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn, formatDateTime } from "@/lib/utils";
 import { readableError, requireResult } from "@/features/attendance/errors";
+import { STAGES, TEMPERATURE, type Lead } from "@/features/crm/labels";
 
 export interface Conversation {
   id: string;
@@ -99,6 +101,7 @@ export function ConversationPanel({
             {[conversation.contacts?.phone, conversation.teams?.name, conversation.channels?.name].filter(Boolean).join(" · ") || "Atendimento interno"}
           </p>
         </div>
+        <LeadBadge organizationId={organizationId} contactId={conversation.contact_id} />
         <Badge variant="secondary">
           {conversation.status === "pending" ? "Aguardando" : conversation.status === "open" ? `Com ${conversation.assigned_to === userId ? "você" : (members[conversation.assigned_to ?? ""] ?? "atendente")}` : "Encerrada"}
         </Badge>
@@ -128,6 +131,52 @@ export function ConversationPanel({
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+/** Etapa e temperatura do lead deste contato. Sem o módulo CRM a consulta volta vazia e nada aparece. */
+function LeadBadge({ organizationId, contactId }: { organizationId: string; contactId: string }) {
+  const supabase = useMemo(() => createClient(), []);
+  const [lead, setLead] = useState<Pick<Lead, "id" | "stage" | "temperature" | "score"> | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const load = () =>
+      supabase
+        .from("leads")
+        .select("id, stage, temperature, score")
+        .eq("organization_id", organizationId)
+        .eq("contact_id", contactId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => { if (active) setLead(data as typeof lead); });
+    const first = setTimeout(load, 0);
+    const channel = supabase
+      .channel(`lead-badge:${contactId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads", filter: `contact_id=eq.${contactId}` }, () => load())
+      .subscribe();
+    return () => {
+      active = false;
+      clearTimeout(first);
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, organizationId, contactId]);
+
+  if (!lead) return null;
+  const stage = STAGES.find((s) => s.key === lead.stage);
+  return (
+    <Link
+      href={`/crm?lead=${lead.id}`}
+      className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted"
+      title="Ver no CRM"
+    >
+      <GraduationCap className="size-3.5 text-brand-cyan" />
+      <span className="size-2 rounded-full" style={{ backgroundColor: stage?.color }} />
+      {stage?.label ?? lead.stage}
+      <span className={cn("rounded-full px-1.5 py-px text-[10px] ring-1", TEMPERATURE[lead.temperature].className)}>{TEMPERATURE[lead.temperature].label}</span>
+      <span className="text-muted-foreground">Ver no CRM</span>
+    </Link>
   );
 }
 

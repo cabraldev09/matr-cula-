@@ -2,7 +2,6 @@
  * Templates de e-mail transacional — HTML com CSS inline (compatível com Gmail/Outlook) + versão texto.
  * Identidade: navy #003b71 · ciano #0693e3 (os mesmos tokens de src/styles/tokens.css).
  */
-import { appUrl } from "@/lib/app-url";
 import { BRAND } from "@/lib/brand";
 
 const NAVY = "#003b71";

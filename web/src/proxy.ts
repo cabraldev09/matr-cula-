@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   "/auth",
   "/convite",
   "/p",
+  "/proposta",
   "/api/webhooks",
   "/api/cron",
   "/api/health",

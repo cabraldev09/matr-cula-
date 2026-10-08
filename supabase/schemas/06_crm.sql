@@ -199,6 +199,12 @@ end $$;
 create trigger conversations_lead after insert on public.conversations
 for each row execute function private.lead_from_conversation();
 
+-- Name used to recognize a course in a message: catalog prefixes such as "CST em" are dropped,
+-- since people write only "análise e desenvolvimento de sistemas".
+create function private.course_key(name text) returns text language sql immutable set search_path = '' as $$
+  select regexp_replace(private.normalize_text(name), '^(cst|curso superior de tecnologia|tecnologo|tecnologia|bacharelado|licenciatura) (em|de) ', '')
+$$;
+
 -- Incoming messages count as engagement and reveal the course of interest.
 create function private.lead_from_message() returns trigger
 language plpgsql security definer set search_path = '' as $$
@@ -210,8 +216,8 @@ begin
   text_norm := ' ' || private.normalize_text(new.body) || ' ';
   select c.id into found_course from public.courses c
     where c.organization_id = new.organization_id and c.active
-      and position(' ' || private.normalize_text(c.name) || ' ' in text_norm) > 0
-    order by length(c.name) desc limit 1;
+      and position(' ' || private.course_key(c.name) || ' ' in text_norm) > 0
+    order by length(private.course_key(c.name)) desc limit 1;
   update public.leads set incoming_messages = incoming_messages + 1,
       course_id = coalesce(course_id, found_course)
     where organization_id = new.organization_id and contact_id = person and stage not in ('matriculado', 'perdido');
@@ -349,10 +355,10 @@ grant select on public.enrollment_charges to authenticated;
 grant insert (organization_id, lead_id, proposal_id, amount_cents, method, pix_payload) on public.enrollment_charges to authenticated;
 grant all on public.courses, public.proposal_settings, public.leads, public.lead_events, public.proposals, public.enrollment_charges to service_role;
 
-revoke all on function private.normalize_text(text), private.lead_score_fill(), private.lead_log_changes(), private.lead_from_conversation(),
+revoke all on function private.normalize_text(text), private.course_key(text), private.lead_score_fill(), private.lead_log_changes(), private.lead_from_conversation(),
   private.lead_from_message(), private.proposal_number(), private.proposal_to_lead(), private.charge_to_lead(),
   private.require_crm_write(), private.confirm_enrollment_charge(uuid, bigint) from public, anon, authenticated, service_role;
-grant execute on function private.confirm_enrollment_charge(uuid, bigint), private.normalize_text(text) to authenticated, service_role;
+grant execute on function private.confirm_enrollment_charge(uuid, bigint), private.normalize_text(text), private.course_key(text) to authenticated, service_role;
 revoke all on function public.confirm_enrollment_charge(uuid, bigint) from public, anon;
 grant execute on function public.confirm_enrollment_charge(uuid, bigint) to authenticated, service_role;
 

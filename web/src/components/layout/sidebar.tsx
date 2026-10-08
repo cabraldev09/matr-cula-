@@ -13,6 +13,9 @@ import {
   CreditCard,
   FilePlus2,
   Files,
+  FileText,
+  KanbanSquare,
+  Library,
   GraduationCap,
   Home,
   Inbox,
@@ -53,6 +56,9 @@ const ICONS: Record<NavIcon, typeof Home> = {
   plan: CreditCard,
   account: UserRound,
   platform: ShieldCheck,
+  funnel: KanbanSquare,
+  proposals: FileText,
+  courses: Library,
 };
 
 function visible(item: NavItem | SettingsNavItem, nav: NavContext): boolean {
@@ -67,6 +73,7 @@ function isActive(pathname: string, href: string): boolean {
   if (href === "/analyses") return pathname === "/analyses" || /^\/analyses\/(?!new)/.test(pathname);
   if (href === "/academic-analysis") return pathname === href || (pathname.startsWith(`${href}/`) && !/^\/academic-analysis\/(students|requests)/.test(pathname));
   if (href === "/atendimento") return pathname === href || /^\/atendimento\/conversas/.test(pathname);
+  if (href === "/crm") return pathname === href || /^\/crm\/leads/.test(pathname);
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

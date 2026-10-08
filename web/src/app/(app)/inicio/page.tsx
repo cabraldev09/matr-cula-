@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BookOpen, FileSearch, GraduationCap, Lock, MessagesSquare } from "lucide-react";
+import { ArrowRight, BookOpen, FileSearch, GraduationCap, KanbanSquare, Lock, MessagesSquare } from "lucide-react";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,7 @@ export const metadata: Metadata = { title: "Início" };
 export const dynamic = "force-dynamic";
 
 const MODULE_CARDS: { module: ModuleCode; href: string; icon: typeof MessagesSquare; description: string }[] = [
+  { module: "crm", href: "/crm", icon: KanbanSquare, description: "Funil de matrículas: lead do WhatsApp, qualificação, proposta de bolsa e taxa de matrícula." },
   { module: "atendimento", href: "/atendimento", icon: MessagesSquare, description: "Conversas, contatos, departamentos e canais da equipe." },
   { module: "analise_curricular", href: "/analyses/new", icon: FileSearch, description: "Leia históricos em PDF e calcule dispensas, pendências e previsão de conclusão." },
   { module: "portal_aluno", href: "/academic-analysis/students", icon: GraduationCap, description: "Área do aluno para enviar documentos e acompanhar solicitações." },
@@ -28,7 +29,15 @@ export default async function HomePage({ searchParams }: PageProps<"/inicio">) {
   const modules = context.entitlements?.modules ?? [];
   const manager = context.organization.role === "owner" || context.organization.role === "admin";
 
-  const [openConversations, analysesThisMonth] = await Promise.all([
+  const [activeLeads, openConversations, analysesThisMonth] = await Promise.all([
+    modules.includes("crm")
+      ? (await createClient())
+          .from("leads")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", context.organization.organizationId)
+          .not("stage", "in", "(matriculado,perdido)")
+          .then((r) => r.count ?? 0)
+      : Promise.resolve(null),
     modules.includes("atendimento")
       ? (await createClient())
           .from("conversations")
@@ -43,6 +52,7 @@ export default async function HomePage({ searchParams }: PageProps<"/inicio">) {
   ]);
 
   const stats: Partial<Record<ModuleCode, string>> = {
+    ...(activeLeads !== null ? { crm: `${activeLeads} lead${activeLeads === 1 ? "" : "s"} no funil` } : {}),
     ...(openConversations !== null ? { atendimento: `${openConversations} conversa${openConversations === 1 ? "" : "s"} em aberto` } : {}),
     ...(analysesThisMonth !== null ? { analise_curricular: `${analysesThisMonth} análise${analysesThisMonth === 1 ? "" : "s"} neste mês` } : {}),
   };

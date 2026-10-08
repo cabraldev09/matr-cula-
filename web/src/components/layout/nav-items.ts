@@ -20,7 +20,10 @@ export type NavIcon =
   | "people"
   | "plan"
   | "account"
-  | "platform";
+  | "platform"
+  | "funnel"
+  | "proposals"
+  | "courses";
 
 export interface NavItem {
   href: string;
@@ -42,6 +45,16 @@ export interface NavSection {
 
 export const NAV_SECTIONS: NavSection[] = [
   { items: [{ href: "/inicio", label: "Início", icon: "home" }] },
+  {
+    label: "CRM",
+    module: "crm",
+    items: [
+      { href: "/crm", label: "Funil de matrículas", icon: "funnel" },
+      { href: "/crm/propostas", label: "Propostas", icon: "proposals" },
+      { href: "/crm/cursos", label: "Cursos e preços", icon: "courses", managerOnly: true },
+      { href: "/crm/configuracoes", label: "Proposta e pagamentos", icon: "settings", managerOnly: true },
+    ],
+  },
   {
     label: "Atendimento",
     module: "atendimento",

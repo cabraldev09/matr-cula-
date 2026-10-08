@@ -31,7 +31,7 @@ test("signup, empty company, trial, attendance end to end and suspension", async
     // Teste grátis do plano Completo libera os módulos.
     await page.getByRole("button", { name: /Testar grátis/ }).last().click();
     await expect(page.getByRole("heading", { name: /Olá, Ana/ })).toBeVisible();
-    await expect(page.getByText("Contratado")).toHaveCount(4);
+    await expect(page.getByText("Contratado")).toHaveCount(5);
 
     // Atendimento: canal de teste, mensagem do cliente, assumir e responder.
     await page.goto("/atendimento/canais");
@@ -54,7 +54,7 @@ test("signup, empty company, trial, attendance end to end and suspension", async
     // Suspensão pela plataforma: os módulos somem e o atendimento fica bloqueado.
     await admin.from("subscriptions").update({ status: "suspended" }).eq("organization_id", organizationId);
     await page.goto("/inicio");
-    await expect(page.getByText("Não incluído")).toHaveCount(4);
+    await expect(page.getByText("Não incluído")).toHaveCount(5);
     await page.goto("/atendimento");
     await expect(page).toHaveURL(/\/conta\/plano/);
     expect(errors).toEqual([]);
