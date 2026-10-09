@@ -1,5 +1,6 @@
 "use client";
 
+import { FormSelect } from "@/components/shared/form-select";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, X } from "lucide-react";
@@ -54,15 +55,11 @@ export function SubscriptionForm({
     >
       <div className="space-y-1.5 sm:col-span-1">
         <Label htmlFor="planId">Plano</Label>
-        <select id="planId" name="planId" defaultValue={current?.planId ?? plans[0]?.id} className="h-9 w-full rounded-md border bg-transparent px-2 text-sm">
-          {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}
-        </select>
+        <FormSelect id="planId" name="planId" defaultValue={current?.planId ?? plans[0]?.id} options={plans.map((plan) => [plan.id, plan.name] as const)} />
       </div>
       <div className="space-y-1.5 sm:col-span-1">
         <Label htmlFor="status">Situação</Label>
-        <select id="status" name="status" defaultValue={current?.status ?? "active"} className="h-9 w-full rounded-md border bg-transparent px-2 text-sm">
-          {STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-        </select>
+        <FormSelect id="status" name="status" defaultValue={current?.status ?? "active"} options={STATUSES} />
       </div>
       <div className="space-y-1.5 sm:col-span-1">
         <Label htmlFor="periodEnd">Válida até</Label>
@@ -82,9 +79,7 @@ export function AddonForm({ organizationId, modules }: { organizationId: string;
     >
       <div className="space-y-1.5">
         <Label htmlFor="module">Módulo</Label>
-        <select id="module" name="module" className="h-9 w-full rounded-md border bg-transparent px-2 text-sm">
-          {modules.map((module) => <option key={module.code} value={module.code}>{module.name}</option>)}
-        </select>
+        <FormSelect id="module" name="module" options={modules.map((module) => [module.code, module.name] as const)} />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="expiresAt">Até (opcional)</Label>

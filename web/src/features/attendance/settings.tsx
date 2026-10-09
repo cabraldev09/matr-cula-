@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { readableError, requireResult } from "@/features/attendance/errors";
 
 interface Team {
@@ -53,6 +54,7 @@ export function TeamsSettings({
   teamMembers: { team_id: string; user_id: string }[];
 }) {
   const { supabase, busy, run } = useMutation();
+  const [ask, confirmDialog] = useConfirm();
   return (
     <Card className="shadow-sm">
       <CardHeader>
@@ -76,7 +78,7 @@ export function TeamsSettings({
             <li key={team.id} className="space-y-2 p-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-2 font-medium"><span className="size-3 rounded-full" style={{ backgroundColor: team.color }} /> {team.name}</span>
-                <Button size="sm" variant="ghost" disabled={busy} aria-label={`Excluir ${team.name}`} onClick={() => window.confirm(`Excluir o departamento ${team.name}?`) && run(() => supabase.from("teams").delete().eq("organization_id", organizationId).eq("id", team.id), "Departamento excluído.")}>
+                <Button size="sm" variant="ghost" disabled={busy} aria-label={`Excluir ${team.name}`} onClick={async () => { if (await ask({ title: `Excluir o departamento ${team.name}?`, description: "As conversas dele passam a ficar sem departamento. Isso não pode ser desfeito.", confirmLabel: "Excluir", destructive: true })) run(() => supabase.from("teams").delete().eq("organization_id", organizationId).eq("id", team.id), "Departamento excluído."); }}>
                   <Trash2 className="size-4" />
                 </Button>
               </div>
@@ -107,12 +109,14 @@ export function TeamsSettings({
           ))}
         </ul>
       </CardContent>
+      {confirmDialog}
     </Card>
   );
 }
 
 export function QuickAnswersSettings({ organizationId, answers }: { organizationId: string; answers: { id: string; shortcut: string; body: string }[] }) {
   const { supabase, busy, run } = useMutation();
+  const [ask, confirmDialog] = useConfirm();
   return (
     <Card className="shadow-sm">
       <CardHeader>
@@ -138,19 +142,21 @@ export function QuickAnswersSettings({ organizationId, answers }: { organization
           {answers.map((answer) => (
             <li key={answer.id} className="flex items-start justify-between gap-2 p-3">
               <span className="min-w-0"><strong>/{answer.shortcut}</strong> <span className="block whitespace-pre-wrap text-muted-foreground">{answer.body}</span></span>
-              <Button size="sm" variant="ghost" disabled={busy} aria-label={`Excluir /${answer.shortcut}`} onClick={() => run(() => supabase.from("quick_answers").delete().eq("organization_id", organizationId).eq("id", answer.id), "Resposta excluída.")}>
+              <Button size="sm" variant="ghost" disabled={busy} aria-label={`Excluir /${answer.shortcut}`} onClick={async () => { if (await ask({ title: `Excluir a resposta /${answer.shortcut}?`, description: "Ela deixa de aparecer nos atalhos da conversa.", confirmLabel: "Excluir", destructive: true })) run(() => supabase.from("quick_answers").delete().eq("organization_id", organizationId).eq("id", answer.id), "Resposta excluída."); }}>
                 <Trash2 className="size-4" />
               </Button>
             </li>
           ))}
         </ul>
       </CardContent>
+      {confirmDialog}
     </Card>
   );
 }
 
 export function TagsSettings({ organizationId, tags }: { organizationId: string; tags: { id: string; name: string; color: string }[] }) {
   const { supabase, busy, run } = useMutation();
+  const [ask, confirmDialog] = useConfirm();
   return (
     <Card className="shadow-sm">
       <CardHeader>
@@ -173,13 +179,14 @@ export function TagsSettings({ organizationId, tags }: { organizationId: string;
           {tags.map((tag) => (
             <span key={tag.id} className="flex items-center gap-1">
               <Badge style={{ backgroundColor: tag.color }}>{tag.name}</Badge>
-              <Button size="icon" variant="ghost" className="size-6" disabled={busy} aria-label={`Excluir ${tag.name}`} onClick={() => run(() => supabase.from("tags").delete().eq("organization_id", organizationId).eq("id", tag.id), "Etiqueta excluída.")}>
+              <Button size="icon" variant="ghost" className="size-6" disabled={busy} aria-label={`Excluir ${tag.name}`} onClick={async () => { if (await ask({ title: `Excluir a etiqueta ${tag.name}?`, description: "Ela é retirada de todos os contatos que a usam.", confirmLabel: "Excluir", destructive: true })) run(() => supabase.from("tags").delete().eq("organization_id", organizationId).eq("id", tag.id), "Etiqueta excluída."); }}>
                 <Trash2 className="size-3" />
               </Button>
             </span>
           ))}
         </div>
       </CardContent>
+      {confirmDialog}
     </Card>
   );
 }

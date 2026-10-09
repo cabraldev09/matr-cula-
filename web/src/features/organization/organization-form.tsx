@@ -1,5 +1,6 @@
 "use client";
 
+import { FormSelect } from "@/components/shared/form-select";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2, Upload } from "lucide-react";
@@ -56,9 +57,7 @@ export function OrganizationForm({ initial }: { initial: { name: string; brandCo
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="timezone">Fuso horário</Label>
-          <select id="timezone" name="timezone" defaultValue={initial.timezone} className="h-9 w-full rounded-md border bg-transparent px-2 text-sm">
-            {TIME_ZONES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
+          <FormSelect id="timezone" name="timezone" defaultValue={initial.timezone} options={TIME_ZONES} />
         </div>
       </div>
       <div className="space-y-1.5">

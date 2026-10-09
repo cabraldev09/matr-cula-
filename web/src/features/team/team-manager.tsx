@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, Loader2, UserMinus, UserPlus } from "lucide-react";
@@ -86,6 +87,7 @@ export interface TeamMember {
 
 export function MemberRow({ member, isOwner, curricular, polos }: { member: TeamMember; isOwner: boolean; curricular: boolean; polos: { code: string; name: string }[] }) {
   const { pending, run } = useRun();
+  const [ask, confirmDialog] = useConfirm();
   const editable = !member.self && member.role !== "owner" && (isOwner || member.role !== "admin");
   const manager = member.role === "owner" || member.role === "admin";
   return (
@@ -115,8 +117,8 @@ export function MemberRow({ member, isOwner, curricular, polos }: { member: Team
             size="sm"
             variant="ghost"
             disabled={pending}
-            onClick={() => {
-              if (window.confirm(`Remover ${member.name} da empresa? O acesso termina na hora.`)) run(() => removeMemberAction(member.userId));
+            onClick={async () => {
+              if (await ask({ title: `Remover ${member.name} da empresa?`, description: "O acesso termina na hora. As conversas e os leads dessa pessoa ficam sem responsável.", confirmLabel: "Remover", destructive: true })) run(() => removeMemberAction(member.userId));
             }}
           >
             <UserMinus className="size-4" /> Remover
@@ -148,6 +150,7 @@ export function MemberRow({ member, isOwner, curricular, polos }: { member: Team
           <Button type="submit" size="sm" variant="outline" disabled={pending}>Salvar</Button>
         </form>
       )}
+      {confirmDialog}
     </li>
   );
 }

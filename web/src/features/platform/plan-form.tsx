@@ -1,5 +1,6 @@
 "use client";
 
+import { FormSelect } from "@/components/shared/form-select";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Pencil, Plus, RefreshCw } from "lucide-react";
@@ -103,10 +104,7 @@ export function PlanFormDialog({ plan, modules }: { plan?: PlanFormValues; modul
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="interval">Cobrança</Label>
-              <select id="interval" name="interval" defaultValue={plan?.interval ?? "month"} className="h-9 w-full rounded-md border bg-transparent px-2 text-sm">
-                <option value="month">Mensal</option>
-                <option value="year">Anual</option>
-              </select>
+              <FormSelect id="interval" name="interval" defaultValue={plan?.interval ?? "month"} options={[["month", "Mensal"], ["year", "Anual"]]} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="trialDays">Dias de teste</Label>

@@ -11,7 +11,7 @@ import { MEMBER_ROLE_LABELS } from "@/lib/member-roles";
 import type { MemberRole } from "@/lib/session";
 import { AdminNav } from "@/features/platform/admin-nav";
 import { AddonForm, RevokeAddonButton, SubscriptionForm } from "@/features/platform/organization-forms";
-import { SUBSCRIPTION_LABELS } from "@/features/platform/labels";
+import { INVOICE_LABELS, SUBSCRIPTION_LABELS } from "@/features/platform/labels";
 
 export const metadata: Metadata = { title: "Empresa" };
 export const dynamic = "force-dynamic";
@@ -125,7 +125,7 @@ export default async function PlatformOrganizationPage({ params }: PageProps<"/a
                       <TableRow key={invoice.id}>
                         <TableCell>{formatDate(invoice.due_at)}</TableCell>
                         <TableCell className="tabular-nums">{formatCurrencyBRL(invoice.amount_cents / 100)}</TableCell>
-                        <TableCell>{invoice.status}</TableCell>
+                        <TableCell>{INVOICE_LABELS[invoice.status] ?? invoice.status}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

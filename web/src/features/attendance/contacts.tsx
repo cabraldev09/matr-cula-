@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ContactsIcon } from "@/components/icons";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PersonAvatar } from "@/components/shared/person-avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -28,6 +29,7 @@ const PAGE = 50;
 
 export function Contacts({ organizationId, manager, tags }: { organizationId: string; manager: boolean; tags: { id: string; name: string; color: string }[] }) {
   const supabase = useMemo(() => createClient(), []);
+  const [ask, confirmDialog] = useConfirm();
   const [rows, setRows] = useState<Contact[]>([]);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(0);
@@ -72,7 +74,7 @@ export function Contacts({ organizationId, manager, tags }: { organizationId: st
   }
 
   async function remove(contact: Contact) {
-    if (!window.confirm(`Excluir ${contact.name}? As conversas dele também deixam de existir.`)) return;
+    if (!(await ask({ title: `Excluir ${contact.name}?`, description: "As conversas deste contato também deixam de existir. Isso não pode ser desfeito.", confirmLabel: "Excluir", destructive: true }))) return;
     const result = await supabase.from("contacts").delete().eq("organization_id", organizationId).eq("id", contact.id);
     if (result.error) toast.error(readableError(result.error));
     else {
@@ -134,6 +136,7 @@ export function Contacts({ organizationId, manager, tags }: { organizationId: st
           <Button size="sm" variant="outline" disabled={(page + 1) * PAGE >= count} onClick={() => setPage((p) => p + 1)}>Próxima</Button>
         </span>
       </div>
+      {confirmDialog}
     </div>
   );
 }

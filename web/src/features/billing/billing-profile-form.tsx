@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cancelSubscriptionAction, saveBillingProfileAction } from "@/features/billing/actions";
@@ -68,12 +69,14 @@ export function BillingProfileForm({ initial }: { initial: Partial<BillingProfil
 export function CancelSubscriptionButton() {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [ask, confirmDialog] = useConfirm();
   return (
+    <>
     <Button
       variant="outline"
       disabled={pending}
-      onClick={() => {
-        if (!window.confirm("Cancelar a renovação? O acesso continua até o fim do período já pago.")) return;
+      onClick={async () => {
+        if (!(await ask({ title: "Cancelar a renovação?", description: "O acesso continua até o fim do período já pago. Depois disso, os módulos ficam indisponíveis.", confirmLabel: "Cancelar renovação", cancelLabel: "Manter plano", destructive: true }))) return;
         start(async () => {
           const result = await cancelSubscriptionAction();
           if (result.ok) {
@@ -85,5 +88,7 @@ export function CancelSubscriptionButton() {
     >
       {pending && <Loader2 className="size-4 animate-spin" />} Cancelar renovação
     </Button>
+    {confirmDialog}
+    </>
   );
 }

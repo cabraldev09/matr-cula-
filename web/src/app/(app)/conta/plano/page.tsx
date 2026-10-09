@@ -9,6 +9,9 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCurrencyBRL, formatDate } from "@/lib/utils";
 import { PlanPicker, type PlanOption } from "@/features/billing/plan-picker";
 import { BillingProfileForm, CancelSubscriptionButton } from "@/features/billing/billing-profile-form";
+import { loadPlanUsage } from "@/features/home/usage";
+import { PlanUsage } from "@/features/home/work-panel";
+import { INVOICE_LABELS } from "@/features/platform/labels";
 
 export const metadata: Metadata = { title: "Plano e faturas" };
 export const dynamic = "force-dynamic";
@@ -21,8 +24,6 @@ const STATUS_LABELS: Record<string, string> = {
   canceled: "Renovação cancelada",
   suspended: "Suspensa",
 };
-
-const INVOICE_LABELS: Record<string, string> = { pending: "Em aberto", paid: "Paga", canceled: "Cancelada", failed: "Não paga", refunded: "Estornada" };
 
 export default async function PlanPage({ searchParams }: PageProps<"/conta/plano">) {
   const context = await getSessionContext();
@@ -40,6 +41,7 @@ export default async function PlanPage({ searchParams }: PageProps<"/conta/plano
     supabase.from("subscriptions").select("*").eq("organization_id", organization.organizationId).maybeSingle(),
   ]);
   const entitlements = context.entitlements;
+  const usage = await loadPlanUsage(organization.organizationId, entitlements, new Date());
   const moduleNames = Object.fromEntries((modules ?? []).map((m) => [m.code, m.name]));
   const options: PlanOption[] = (plans ?? []).map((p) => ({
     id: p.id,
@@ -88,6 +90,7 @@ export default async function PlanPage({ searchParams }: PageProps<"/conta/plano
           </CardContent>
         </Card>
       )}
+      {usage.length > 0 && <div className="mb-6"><PlanUsage usage={usage} /></div>}
       <PlanPicker
         plans={options}
         moduleNames={moduleNames}
