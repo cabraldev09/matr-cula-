@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { ExternalLink, FileDown } from "lucide-react";
+import { ProposalIcon } from "@/components/icons";
+import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -55,7 +57,7 @@ export default async function ProposalsPage() {
                 </TableRow>
               ))}
               {(proposals ?? []).length === 0 && (
-                <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">Nenhuma proposta ainda. Gere a primeira pelo funil, no painel do lead.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="p-4"><EmptyState icon={ProposalIcon} title="Nenhuma proposta ainda" description="Gere a primeira pelo funil de matrículas, na aba Proposta e taxa do painel do lead." compact /></TableCell></TableRow>
               )}
             </TableBody>
           </Table>

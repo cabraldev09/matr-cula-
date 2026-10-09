@@ -41,7 +41,7 @@ export async function PublicPlans() {
               </li>
             ))}
           </ul>
-          <Link href="/cadastro" className="mt-8 rounded-xl bg-brand-navy px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#07558f]">
+          <Link href="/cadastro" className="mt-8 rounded-xl bg-brand-navy px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-navy-700">
             {plan.trial_days > 0 ? `Testar grátis por ${plan.trial_days} dias` : "Começar agora"}
           </Link>
         </article>

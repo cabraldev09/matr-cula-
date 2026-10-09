@@ -9,7 +9,7 @@ export default function PortalLoading() {
         <div className="h-16 rounded-2xl bg-white" />
         <div className="h-20 w-2/3 rounded-2xl bg-slate-200/60 motion-safe:animate-pulse" />
         <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
-          <div className="h-72 rounded-3xl bg-[#003B71]/15 motion-safe:animate-pulse" />
+          <div className="h-72 rounded-3xl bg-brand-navy/15 motion-safe:animate-pulse" />
           <div className="grid grid-cols-2 gap-4">
             {[1, 2, 3, 4].map((value) => (
               <div

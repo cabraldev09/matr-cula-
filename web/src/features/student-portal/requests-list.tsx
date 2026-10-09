@@ -36,7 +36,7 @@ export async function StudentRequestsList({
     >
       {!compact && (
         <>
-          <h2 className="text-lg font-semibold text-[#003B71]">
+          <h2 className="text-lg font-semibold text-brand-navy">
             Minhas solicitações
           </h2>
           <p className="mt-1 text-sm text-slate-500">

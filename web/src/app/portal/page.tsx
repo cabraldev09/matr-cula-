@@ -105,13 +105,13 @@ export default async function StudentPortalPage({
     <PortalEffects>
       <div className="portal-dashboard min-h-dvh bg-[#f5f8fc] text-slate-900">
         {support && (
-          <div className="sticky top-0 z-50 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-b border-yellow-300 bg-[#FEF84C] px-4 py-3 text-center text-sm text-[#003B71]">
+          <div className="sticky top-0 z-50 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-b border-yellow-300 bg-brand-gold px-4 py-3 text-center text-sm text-brand-navy">
             <strong>
               Você está visualizando o portal de {enrollment.name} como tutor.
             </strong>
             <Link
               href={`/academic-analysis/students/${enrollment.id}`}
-              className="min-h-10 rounded-lg border border-[#003B71]/25 px-3 py-2 font-semibold"
+              className="min-h-10 rounded-lg border border-brand-navy/25 px-3 py-2 font-semibold"
             >
               Sair da visualização
             </Link>
@@ -120,7 +120,7 @@ export default async function StudentPortalPage({
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-5 sm:px-6">
             <Link href={base}>
-              <BrandLogo src={organization?.logoUrl} alt={organization?.name} className="text-[#003B71]" maxWidthClassName="max-w-[200px]" />
+              <BrandLogo src={organization?.logoUrl} alt={organization?.name} className="text-brand-navy" maxWidthClassName="max-w-[200px]" />
             </Link>
             <div className="flex items-center gap-2 sm:gap-3">
               <span className="flex items-center gap-2 text-sm font-medium">
@@ -191,7 +191,7 @@ export default async function StudentPortalPage({
                     </p>
                   ) : (
                     <details className="group mt-3 rounded-2xl border border-slate-200 bg-white">
-                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-[#003B71] [&::-webkit-details-marker]:hidden">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-brand-navy [&::-webkit-details-marker]:hidden">
                         <span className="flex items-center gap-2"><KeyRound className="size-4" /> Alterar senha</span>
                         <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
                       </summary>
@@ -215,7 +215,7 @@ export default async function StudentPortalPage({
         <main className="mx-auto max-w-6xl space-y-6 px-4 py-7 sm:px-6 sm:py-10">
           {!support && !enrollment.welcomedAt && (
             <section className="rounded-2xl border border-brand-cyan/25 bg-gradient-to-br from-brand-cyan-50 via-white to-sky-50 p-5">
-              <h2 className="font-semibold text-[#003B71]">
+              <h2 className="font-semibold text-brand-navy">
                 Bem-vindo ao seu Portal Acadêmico.
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -233,7 +233,7 @@ export default async function StudentPortalPage({
             <p className="text-sm text-slate-500">
               Olá, {enrollment.name.split(" ")[0]}.
             </p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#003B71] sm:text-3xl">
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-brand-navy sm:text-3xl">
               Minha Análise Acadêmica
             </h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">
@@ -285,7 +285,7 @@ export default async function StudentPortalPage({
             />
           ) : (
             <section className="rounded-2xl border border-dashed bg-white p-8 text-center">
-              <h2 className="text-lg font-semibold text-[#003B71]">
+              <h2 className="text-lg font-semibold text-brand-navy">
                 Sua jornada começa aqui
               </h2>
               <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-600">
@@ -298,7 +298,7 @@ export default async function StudentPortalPage({
             id="historico"
             className="rounded-2xl border bg-white p-5 sm:p-6"
           >
-            <h2 className="text-lg font-semibold text-[#003B71]">
+            <h2 className="text-lg font-semibold text-brand-navy">
               Atualizações da sua análise
             </h2>
             <p className="mt-1 text-sm text-slate-500">
@@ -314,7 +314,7 @@ export default async function StudentPortalPage({
                       <div>
                         <Link
                           href={withParam("version", version.id)}
-                          className="font-medium text-[#003B71] underline-offset-4 hover:underline"
+                          className="font-medium text-brand-navy underline-offset-4 hover:underline"
                         >
                           {dateLabel(version.createdAt)}
                         </Link>

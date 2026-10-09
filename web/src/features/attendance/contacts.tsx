@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ContactsIcon } from "@/components/icons";
+import { EmptyState } from "@/components/shared/empty-state";
+import { PersonAvatar } from "@/components/shared/person-avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { readableError, requireResult } from "@/features/attendance/errors";
 
@@ -92,11 +95,13 @@ export function Contacts({ organizationId, manager, tags }: { organizationId: st
           {loading ? (
             <li className="flex justify-center p-8"><Loader2 className="size-5 animate-spin text-muted-foreground" /></li>
           ) : rows.length === 0 ? (
-            <li className="p-8 text-center text-sm text-muted-foreground">Nenhum contato.</li>
+            <li className="p-4"><EmptyState icon={ContactsIcon} title="Nenhum contato encontrado" description="Os contatos aparecem sozinhos quando alguém escreve no WhatsApp do polo. Também dá para cadastrar um manualmente." compact /></li>
           ) : (
             rows.map((contact) => (
               <li key={contact.id} className="grid gap-2 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
-                <div className="min-w-0">
+                <div className="flex min-w-0 items-start gap-3">
+                  <PersonAvatar name={contact.name} />
+                  <div className="min-w-0">
                   <p className="truncate font-medium">{contact.name}</p>
                   <p className="truncate text-sm text-muted-foreground">{[contact.phone, contact.email].filter(Boolean).join(" · ") || "Sem telefone ou e-mail"}</p>
                   <div className="mt-2 flex flex-wrap gap-1">
@@ -111,6 +116,7 @@ export function Contacts({ organizationId, manager, tags }: { organizationId: st
                       );
                     })}
                   </div>
+                </div>
                 </div>
                 <div className="flex gap-1 sm:justify-end">
                   <ContactDialog organizationId={organizationId} contact={contact} onSaved={load} />

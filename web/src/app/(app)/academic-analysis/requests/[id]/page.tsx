@@ -45,7 +45,7 @@ export default async function AcademicRequestPage({
         <p className="text-xs font-semibold uppercase tracking-widest text-sky-700">
           Protocolo #{request.protocol}
         </p>
-        <h1 className="mt-2 text-2xl font-semibold text-[#003B71]">
+        <h1 className="mt-2 text-2xl font-semibold text-brand-navy">
           {student.name}
         </h1>
         <p className="mt-2 text-sm text-slate-500">
@@ -131,7 +131,7 @@ export default async function AcademicRequestPage({
         </span>
       </nav>
       <section className="rounded-2xl border bg-white p-6">
-        <h2 className="font-semibold text-[#003B71]">Resultado e alterações</h2>
+        <h2 className="font-semibold text-brand-navy">Resultado e alterações</h2>
         <p className="mt-3 text-sm">
           {request.result ?? "Aguardando processamento."}
         </p>

@@ -50,7 +50,7 @@ function LeadDetail({ lead, onChanged, onMove, organizationId, userId, members, 
   const stage = STAGES.find((s) => s.key === lead.stage)!;
   return (
     <>
-      <SheetHeader className="border-b bg-gradient-to-br from-brand-navy to-[#0a5a9a] p-5 text-white">
+      <SheetHeader className="border-b bg-gradient-to-br from-brand-navy to-brand-navy-700 p-5 text-white">
         <SheetTitle className="flex flex-wrap items-center gap-2 text-xl text-white">
           {lead.contacts?.name ?? "Lead"}
           <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium ring-1", TEMPERATURE[lead.temperature].className)}>{TEMPERATURE[lead.temperature].label} · {lead.score}</span>

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AlertTriangle, Cpu } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { MeterIcon } from "@/components/icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrencyBRL, formatCurrencyUSD, formatNumber, pluralize } from "@/lib/utils";
 import type { MonthlyAiUsageSummary } from "@/repositories/ai-usage-repository";
@@ -15,7 +16,7 @@ export function AiUsageMonthCards({ summary }: { summary: MonthlyAiUsageSummary 
     <div className="grid gap-6 xl:grid-cols-5">
       <Card className="shadow-sm xl:col-span-3">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
-          <CardTitle className="flex items-center gap-2 text-base"><Cpu className="size-4 text-brand-cyan-700" /> Consumo da API no mês</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><MeterIcon className="size-4 text-brand-cyan-700" /> Consumo da API no mês</CardTitle>
           <Link href="/settings/usage" className="shrink-0 text-sm text-brand-cyan-700 underline">Ver detalhes e filtrar</Link>
         </CardHeader>
         <CardContent>

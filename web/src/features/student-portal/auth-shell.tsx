@@ -35,7 +35,7 @@ export function PortalAuthShell({
         </aside>
         <div className="relative flex flex-col items-center justify-center px-5 py-10 sm:px-10 sm:py-12 lg:px-14">
           <div className="portal-reveal relative w-full max-w-sm">
-            <div className="mb-10 text-[#003B71]">
+            <div className="mb-10 text-brand-navy">
               <BrandLogo src={organization?.logoUrl} alt={organization?.name} maxWidthClassName="max-w-[240px]" />
             </div>
             <p className="text-[11px] font-bold uppercase tracking-[.22em]" style={{ color }}>

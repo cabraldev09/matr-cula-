@@ -105,7 +105,7 @@ export async function StudentAnalysisView({
             <p className="text-xs font-semibold tracking-[0.13em] text-brand-cyan-700 uppercase">
               Entenda sua situação
             </p>
-            <h2 className="mt-1 text-lg font-semibold text-[#003B71]">{status}</h2>
+            <h2 className="mt-1 text-lg font-semibold text-brand-navy">{status}</h2>
             <p className="mt-2 text-sm leading-7 text-slate-600">
               {result.currentPeriod
                 ? `Você está no ${result.currentPeriod}º período${result.previousPending ? ` e tem ${result.previousPending} disciplina(s) de períodos anteriores para cursar` : " e não tem disciplinas de períodos anteriores para cursar"}.`
@@ -131,7 +131,7 @@ export async function StudentAnalysisView({
               <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold tracking-[0.13em] text-brand-cyan-700 uppercase">Planejamento</p>
-                  <h2 id="caminho-conclusao" className="mt-1 text-xl font-semibold tracking-tight text-[#003B71]">
+                  <h2 id="caminho-conclusao" className="mt-1 text-xl font-semibold tracking-tight text-brand-navy">
                     Seu caminho até a conclusão
                   </h2>
                   <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
@@ -144,7 +144,7 @@ export async function StudentAnalysisView({
                   </p>
                 </div>
                 {completion && (
-                  <p className="rounded-2xl bg-[#003B71] px-4 py-2.5 text-white">
+                  <p className="rounded-2xl bg-brand-navy px-4 py-2.5 text-white">
                     <span className="block text-[10px] font-semibold tracking-[0.14em] text-cyan-100 uppercase">Conclusão prevista</span>
                     <span className="text-lg font-semibold tabular-nums">{completion}</span>
                   </p>
@@ -158,7 +158,7 @@ export async function StudentAnalysisView({
             currentPeriod={result.currentPeriod}
           />
           <section className={block}>
-            <h2 className="text-lg font-semibold text-[#003B71]">
+            <h2 className="text-lg font-semibold text-brand-navy">
               Pendências de períodos anteriores
             </h2>
             <p className="mt-1 mb-4 text-sm text-slate-500">
@@ -172,7 +172,7 @@ export async function StudentAnalysisView({
           </section>
           {result.previousCoursesInProgress.length > 0 && (
             <section className={block}>
-              <h2 className="text-lg font-semibold text-[#003B71]">
+              <h2 className="text-lg font-semibold text-brand-navy">
                 Disciplinas anteriores em andamento
               </h2>
               <p className="mt-1 text-sm text-slate-500">
@@ -197,7 +197,7 @@ export async function StudentAnalysisView({
         </>
       )}
       <details className="group rounded-2xl border border-slate-200 bg-white">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 font-semibold text-[#003B71] [&::-webkit-details-marker]:hidden">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 font-semibold text-brand-navy [&::-webkit-details-marker]:hidden">
           <span>
             Disciplinas e resultados
             <span className="mt-0.5 block text-xs font-normal text-slate-500">Todas as disciplinas lidas do seu documento</span>

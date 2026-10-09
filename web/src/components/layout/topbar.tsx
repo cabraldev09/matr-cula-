@@ -119,7 +119,7 @@ function BackButton() {
     else router.push(parent ? `/${parent}` : "/");
   }
   return (
-    <Button type="button" variant="ghost" size="sm" onClick={goBack} className="gap-1.5 text-slate-600 hover:text-[#003B71]" aria-label="Voltar para a página anterior">
+    <Button type="button" variant="ghost" size="sm" onClick={goBack} className="gap-1.5 text-slate-600 hover:text-brand-navy" aria-label="Voltar para a página anterior">
       <ArrowLeft className="size-4" />
       <span className="hidden sm:inline">Voltar</span>
     </Button>

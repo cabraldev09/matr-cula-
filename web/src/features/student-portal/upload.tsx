@@ -181,7 +181,7 @@ export function StudentUpload({
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 id="update-title" className="font-semibold text-[#003B71]">
+          <h2 id="update-title" className="font-semibold text-brand-navy">
             Atualizar minha análise
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
@@ -201,7 +201,7 @@ export function StudentUpload({
       {(processing || sending) && (
         <div
           role="status"
-          className="mt-5 flex items-center gap-3 rounded-xl bg-brand-cyan-50 p-4 text-sm text-[#003B71]"
+          className="mt-5 flex items-center gap-3 rounded-xl bg-brand-cyan-50 p-4 text-sm text-brand-navy"
         >
           <Loader2 className="size-5 shrink-0 animate-spin" />
           <div>
@@ -257,7 +257,7 @@ export function StudentUpload({
             className={`rounded-2xl border-2 border-dashed p-6 text-center transition-colors ${dragging ? "border-brand-cyan bg-brand-cyan-50" : "border-brand-cyan/30 bg-brand-cyan-50/50"}`}
           >
             <UploadCloud className="mx-auto size-8 text-brand-cyan-700" />
-            <p className="mt-3 font-semibold text-[#003B71]">
+            <p className="mt-3 font-semibold text-brand-navy">
               Arraste seu documento aqui
             </p>
             <p className="mt-1 text-sm text-slate-500">
@@ -269,7 +269,7 @@ export function StudentUpload({
               accept="application/pdf,.pdf"
               aria-label="Selecionar documento"
               disabled={processing || sending}
-              className="mt-4 block w-full min-w-0 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-white file:p-3 file:text-[#003B71]"
+              className="mt-4 block w-full min-w-0 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-white file:p-3 file:text-brand-navy"
               onChange={(e) => {
                 void choose(e.target.files);
               }}
@@ -322,7 +322,7 @@ export function StudentUpload({
               required
               checked={confirmed}
               onChange={(event) => setConfirmed(event.target.checked)}
-              className="mt-1 size-4 accent-[#003B71]"
+              className="mt-1 size-4 accent-brand-navy"
             />
             <span>
               Confirmo que o documento está atualizado, completo e pertence a

@@ -7,8 +7,6 @@
 
 @theme {
   --animate-blur-fade: blur-fade 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
-  --animate-shimmer-text: shimmer-text 3.2s linear infinite;
-  --animate-shine: shine 6s linear infinite;
   --animate-float: float 6s ease-in-out infinite;
   --animate-pulse-ring: pulse-ring 2.2s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
   --animate-marquee: marquee 40s linear infinite;
@@ -16,15 +14,6 @@
   @keyframes blur-fade {
     from { opacity: 0; filter: blur(6px); transform: translateY(10px); }
     to { opacity: 1; filter: blur(0); transform: translateY(0); }
-  }
-  @keyframes shimmer-text {
-    from { background-position: 200% 0; }
-    to { background-position: -200% 0; }
-  }
-  @keyframes shine {
-    from { background-position: 0% 0%; }
-    50% { background-position: 100% 100%; }
-    to { background-position: 0% 0%; }
   }
   @keyframes float {
     0%, 100% { transform: translateY(0); }
@@ -47,6 +36,9 @@
   --color-brand-cyan: var(--brand-cyan);
   --color-brand-gold: var(--brand-gold);
   --color-brand-navy-50: var(--brand-navy-50);
+  --color-brand-navy-700: var(--brand-navy-700);
+  --color-brand-navy-900: var(--brand-navy-900);
+  --color-brand-cyan-400: var(--brand-cyan-400);
   --color-brand-cyan-50: var(--brand-cyan-50);
   --color-brand-gold-50: var(--brand-gold-50);
   --color-status-success: var(--status-success);
@@ -352,32 +344,6 @@
 @media (hover: hover) {
   .magic-card:hover { transform: translateY(-2px); box-shadow: 0 22px 44px -30px rgb(0 59 113 / .55); border-color: rgb(6 147 227 / .35); }
 }
-.shine-border {
-  position: relative;
-  isolation: isolate;
-}
-.shine-border::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(120deg, transparent 20%, rgb(6 147 227 / .75), rgb(254 248 76 / .7), transparent 80%);
-  background-size: 300% 300%;
-  animation: var(--animate-shine);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-.shimmer-text {
-  background: linear-gradient(90deg, currentColor 40%, rgb(255 255 255 / .95) 50%, currentColor 60%);
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: var(--animate-shimmer-text);
-}
 .glass-surface {
   background: rgb(255 255 255 / .1);
   border: 1px solid rgb(255 255 255 / .16);
@@ -392,7 +358,7 @@
 }
 [data-slot="card"] { transition: box-shadow .3s cubic-bezier(.2,.7,.2,1), transform .3s cubic-bezier(.2,.7,.2,1); }
 @media (prefers-reduced-motion: reduce) {
-  .animate-blur-fade, .shimmer-text, .shine-border::after, .animate-float, .animate-pulse-ring { animation: none !important; }
+  .animate-blur-fade, .animate-float, .animate-pulse-ring { animation: none !important; }
   .magic-card, [data-slot="card"] { transition: none !important; transform: none !important; }
 }
 
@@ -411,3 +377,7 @@
   .reveal { opacity: 1; transform: none; transition: none; }
   .animate-marquee, .animate-float { animation: none; }
 }
+
+/* Ícones próprios: o detalhe usa o acento; sobre a barra lateral escura, o ciano claro. */
+.icon-accent { stroke: var(--icon-accent, currentColor); }
+[data-sidebar] { --icon-accent: var(--icon-accent-on-dark); }

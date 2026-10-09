@@ -22,11 +22,11 @@ export function SiteHeader({ loggedIn }: { loggedIn: boolean }) {
         </nav>
         <div className="flex items-center gap-2 text-sm">
           {loggedIn ? (
-            <Link href="/inicio" className="rounded-full bg-brand-navy px-4 py-2 font-semibold text-white shadow-sm transition-colors hover:bg-[#07558f]">Abrir sistema</Link>
+            <Link href="/inicio" className="rounded-full bg-brand-navy px-4 py-2 font-semibold text-white shadow-sm transition-colors hover:bg-brand-navy-700">Abrir sistema</Link>
           ) : (
             <>
               <Link href="/login" className="rounded-full border border-brand-navy/20 px-4 py-2 font-semibold text-brand-navy transition-colors hover:bg-brand-navy-50">Entrar</Link>
-              <Link href="/cadastro" className="hidden rounded-full bg-brand-navy px-4 py-2 font-semibold text-white shadow-sm transition-colors hover:bg-[#07558f] sm:inline-flex">Testar grátis</Link>
+              <Link href="/cadastro" className="hidden rounded-full bg-brand-navy px-4 py-2 font-semibold text-white shadow-sm transition-colors hover:bg-brand-navy-700 sm:inline-flex">Testar grátis</Link>
             </>
           )}
         </div>

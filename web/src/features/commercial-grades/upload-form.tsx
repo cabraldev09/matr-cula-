@@ -125,7 +125,7 @@ export function CommercialGradeUploadForm({ maxMb }: { maxMb: number }) {
           </div>
           {sending && (
             <div className="h-1 bg-slate-100" role="progressbar" aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={finished} aria-label="Progresso do envio">
-              <div className="h-full bg-gradient-to-r from-[#003B71] to-[#0693E3] transition-all" style={{ width: `${(finished / items.length) * 100}%` }} />
+              <div className="h-full bg-gradient-to-r from-brand-navy to-[#0693E3] transition-all" style={{ width: `${(finished / items.length) * 100}%` }} />
             </div>
           )}
           <ul className="max-h-80 divide-y overflow-y-auto">

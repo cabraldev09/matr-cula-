@@ -17,7 +17,7 @@ export default async function StudentRecoveryPage() {
       description="Informe o e-mail cadastrado pela equipe acadêmica para receber as instruções de recuperação."
     >
       <ForgotPasswordForm />
-      <Link href={organization ? `/p/${organization.slug}` : "/portal/login"} className="mt-6 block text-center text-sm text-[#003B71] underline">
+      <Link href={organization ? `/p/${organization.slug}` : "/portal/login"} className="mt-6 block text-center text-sm text-brand-navy underline">
         Voltar para entrar
       </Link>
     </PortalAuthShell>

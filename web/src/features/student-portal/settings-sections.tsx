@@ -19,7 +19,7 @@ export function SettingsSection({
           <Icon className="size-4" />
         </span>
         <div className="min-w-0">
-          <h3 className="font-semibold text-[#003B71]">{title}</h3>
+          <h3 className="font-semibold text-brand-navy">{title}</h3>
           {description && <p className="mt-0.5 text-sm leading-5 text-slate-500">{description}</p>}
         </div>
       </div>

@@ -22,7 +22,7 @@ export function buildCommercialWhatsAppMessage(
 ) {
   const proposal = buildCommercialProposal(proposalInput(vm));
   return [
-    `Olá${vm.studentName ? `, ${vm.studentName}` : ""}! Temos uma ótima notícia sobre seu aproveitamento curricular 🎓`,
+    `Olá${vm.studentName ? `, ${vm.studentName}` : ""}! Temos uma ótima notícia sobre seu aproveitamento curricular`,
     "",
     vm.courseName ? `Curso: *${vm.courseName}*` : null,
     `✓ *${vm.totals.exempted} disciplinas* já aproveitadas (${proposal.exemptedPercentage}% da grade).`,

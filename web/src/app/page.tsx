@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, BarChart3, CheckCircle2, FileText, Globe, Camera, GraduationCap, KanbanSquare, MessageCircle, QrCode, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, CheckCircle2 } from "lucide-react";
+import {
+  ChannelsIcon, FrameIcon, FunnelIcon, PixIcon, PlatformIcon, ProposalIcon, ReportsIcon, SentIcon, StepsIcon,
+  TeamsIcon, TemperatureIcon, WindowIcon, type IconComponent,
+} from "@/components/icons";
 import { getSessionContext } from "@/lib/session";
 import { BRAND } from "@/lib/brand";
 import { SiteHeader } from "@/features/marketing/site-header";
@@ -14,9 +18,9 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 const CHANNELS = [
-  { icon: MessageCircle, title: "WhatsApp oficial", text: "Conecte o número do polo pela API oficial da Meta. Cada mensagem nova vira lead no funil na mesma hora.", tone: "bg-emerald-50 text-emerald-600" },
-  { icon: Globe, title: "Cadastro pela equipe", text: "Lead que chegou por telefone, indicação ou visita? A consultora cadastra em segundos e ele entra no mesmo funil.", tone: "bg-sky-50 text-sky-600" },
-  { icon: Camera, title: "Instagram Direct", text: "Em breve: mensagens do Instagram do polo no mesmo funil de matrículas.", tone: "bg-pink-50 text-pink-600", soon: true },
+  { icon: ChannelsIcon, title: "WhatsApp oficial", text: "Conecte o número do polo pela API oficial da Meta. Cada mensagem nova vira lead no funil na mesma hora.", tone: "bg-emerald-50 text-emerald-600" },
+  { icon: WindowIcon, title: "Cadastro pela equipe", text: "Lead que chegou por telefone, indicação ou visita? A consultora cadastra em segundos e ele entra no mesmo funil.", tone: "bg-sky-50 text-sky-600" },
+  { icon: FrameIcon, title: "Instagram Direct", text: "Em breve: mensagens do Instagram do polo no mesmo funil de matrículas.", tone: "bg-pink-50 text-pink-600", soon: true },
 ];
 
 const FEATURES: FeatureTab[] = [
@@ -57,7 +61,7 @@ export default async function LandingPage() {
         <div className="relative mx-auto grid max-w-6xl gap-10 px-4 pb-10 pt-14 sm:px-6 lg:grid-cols-[1.35fr_1fr] lg:items-center lg:pt-20">
           <div className="animate-blur-fade">
             <p className="inline-flex items-center gap-2 rounded-full border border-brand-cyan/30 bg-white px-3 py-1 text-xs font-semibold text-brand-navy shadow-sm">
-              <GraduationCap className="size-4 text-brand-cyan" /> Feito para polos de ensino superior
+              <StepsIcon className="size-4 text-brand-cyan" /> Feito para polos de ensino superior
             </p>
             <h1 className="mt-5 text-4xl font-bold leading-[1.08] tracking-tight text-brand-navy sm:text-6xl">
               Do primeiro “oi”
@@ -75,33 +79,21 @@ export default async function LandingPage() {
               <span className="flex items-center gap-1.5 text-xs text-slate-500"><BadgeCheck className="size-4 text-emerald-500" /> 7 dias grátis, sem cartão</span>
             </div>
           </div>
-          <div aria-hidden="true" className="relative mx-auto hidden h-72 w-full max-w-sm lg:block">
-            <div className="absolute inset-6 overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-brand-navy to-brand-cyan p-6 opacity-95">
-              <div className="mt-14 grid h-[calc(100%-3.5rem)] grid-cols-3 gap-2">
-                {[[70, 45, 30], [55, 35], [40]].map((bars, col) => (
-                  <div key={col} className="flex flex-col gap-2 rounded-xl bg-white/10 p-2">
-                    <span className="h-1.5 w-8 rounded-full bg-white/50" />
-                    {bars.map((w, i) => <span key={i} className="h-7 rounded-lg bg-white/85" style={{ width: `${w + 30}%` }} />)}
-                  </div>
-                ))}
-              </div>
+          <div aria-hidden="true" className="relative mx-auto hidden h-[22rem] w-full max-w-md lg:block">
+            {/* Recortes das telas reais (geradas por scripts/site-screenshots.mjs): funil e painel do lead. */}
+            <div className="absolute left-0 top-0 h-48 w-[80%] -rotate-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/15">
+              {/* eslint-disable-next-line @next/next/no-img-element -- captura estática */}
+              <img src="/site/crm.webp" alt="" width={1600} height={1000} className="block max-w-none" style={{ width: "245%", marginLeft: "-49%", marginTop: "-217px" }} />
             </div>
-            <div className="absolute left-0 top-6 animate-float rounded-2xl bg-white p-3 text-sm shadow-xl">
-              <p className="font-semibold">Larissa Mendes</p>
-              <p className="text-slate-500">“Quero Biomedicina, tem bolsa?”</p>
+            <div className="absolute right-0 top-24 h-64 w-[58%] rotate-[1.5deg] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/25">
+              {/* eslint-disable-next-line @next/next/no-img-element -- captura estática */}
+              <img src="/site/crm-lead.webp" alt="" width={1600} height={1000} className="block max-w-none" style={{ width: "377%", marginLeft: "-277%" }} />
             </div>
-            <div className="absolute -right-4 top-24 animate-float rounded-2xl bg-white px-4 py-3 text-sm shadow-xl [animation-delay:1.5s]">
-              <p className="text-xs text-slate-500">Proposta nº 128</p>
-              <p className="font-semibold text-brand-navy">Bolsa de 69,77%</p>
+            <div className="absolute bottom-6 left-2 flex items-center gap-2 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm font-semibold text-orange-700 shadow-lg">
+              <TemperatureIcon level="quente" className="size-5" /> Lead quente · 75
             </div>
-            <div className="absolute bottom-2 left-8 animate-float rounded-2xl bg-white px-4 py-3 text-sm shadow-xl [animation-delay:3s]">
-              <p className="flex items-center gap-1.5 font-semibold text-emerald-600"><CheckCircle2 className="size-4" /> Taxa paga</p>
-              <p className="text-xs text-slate-500">R$ 99,00 via Pix</p>
-            </div>
-            <div className="absolute -bottom-3 right-4 flex gap-2">
-              {[MessageCircle, Camera, QrCode].map((Icon, i) => (
-                <span key={i} className="grid size-10 place-items-center rounded-full bg-white text-brand-navy shadow-lg"><Icon className="size-5" /></span>
-              ))}
+            <div className="absolute -bottom-2 right-8 flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 shadow-lg">
+              <SentIcon className="size-4" /> Taxa paga · R$ 99,00
             </div>
           </div>
         </div>
@@ -113,8 +105,8 @@ export default async function LandingPage() {
               {/* eslint-disable-next-line @next/next/no-img-element -- captura estática gerada por script */}
               <img src="/site/crm.webp" alt="Funil de matrículas do Matrícula+ com leads por etapa" width={1600} height={1000} className="block h-auto w-full" />
             </BrowserFrame>
-            <span className="absolute -left-1 top-1/3 hidden animate-float items-center gap-2 rounded-full bg-brand-navy px-4 py-2 text-sm font-semibold text-white shadow-xl sm:inline-flex">
-              <Sparkles className="size-4 text-brand-gold" /> Lead qualificado automaticamente
+            <span className="absolute -left-1 top-1/3 hidden items-center gap-2 rounded-full bg-brand-navy px-4 py-2 text-sm font-semibold text-white shadow-xl sm:inline-flex">
+              <TemperatureIcon level="morno" className="size-4 text-brand-gold" /> Lead qualificado automaticamente
             </span>
           </Reveal>
         </div>
@@ -214,14 +206,14 @@ export default async function LandingPage() {
             <p className="mt-4 text-slate-600">Cadastre a tabela de cursos do polo uma vez. Depois é só escolher o curso: mensalidade, bolsa, pontualidade e projeção por semestre saem calculadas, no padrão da instituição.</p>
             <ul className="mt-6 space-y-3 text-sm text-slate-700">
               {[
-                [FileText, "PDF e link público com a logo do polo"],
-                [KanbanSquare, "Lead vai para \"Proposta enviada\" sozinho"],
-                [QrCode, "Taxa de matrícula por Pix ou link de pagamento"],
-                [BarChart3, "Análise curricular para quem já estudou: dispensas e previsão de conclusão"],
-                [Users, "Cada polo com sua equipe, sua conta e seus dados"],
-                [ShieldCheck, "Um polo nunca vê os dados de outro"],
+                [ProposalIcon, "PDF e link público com a logo do polo"],
+                [FunnelIcon, "Lead vai para \"Proposta enviada\" sozinho"],
+                [PixIcon, "Taxa de matrícula por Pix ou link de pagamento"],
+                [ReportsIcon, "Análise curricular para quem já estudou: dispensas e previsão de conclusão"],
+                [TeamsIcon, "Cada polo com sua equipe, sua conta e seus dados"],
+                [PlatformIcon, "Um polo nunca vê os dados de outro"],
               ].map(([Icon, text]) => {
-                const I = Icon as typeof FileText;
+                const I = Icon as IconComponent;
                 return <li key={text as string} className="flex items-start gap-3"><I className="mt-0.5 size-5 shrink-0 text-brand-cyan" /> {text as string}</li>;
               })}
             </ul>

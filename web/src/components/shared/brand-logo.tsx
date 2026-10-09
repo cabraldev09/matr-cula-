@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { BRAND } from "@/lib/brand";
 import { cn } from "@/lib/utils";
+import { BrandMarkSvg } from "@/components/icons/brand-mark";
 
 /** Logo da plataforma. Com `src`, mostra a logo da empresa cliente (marca própria). */
 export function BrandLogo({
@@ -28,7 +29,7 @@ export function BrandLogo({
   }
   return (
     <div className={cn("flex items-center gap-2 font-semibold tracking-tight", className)} aria-label={BRAND.name}>
-      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-cyan text-lg font-bold text-white shadow-sm">M+</span>
+      <BrandMarkSvg />
       {!compact && <span className={cn("truncate text-xl", maxWidthClassName)}>{BRAND.name}</span>}
     </div>
   );
@@ -39,6 +40,6 @@ export function BrandMark({ className }: { className?: string }) {
   return BRAND.logo ? (
     <Image src={BRAND.logo} alt={BRAND.name} width={40} height={40} className={cn("size-10 object-contain", className)} />
   ) : (
-    <span className={cn("grid size-9 place-items-center rounded-xl bg-brand-cyan text-lg font-bold text-white", className)}>M+</span>
+    <BrandMarkSvg className={className} />
   );
 }

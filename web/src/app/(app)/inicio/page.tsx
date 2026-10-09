@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BookOpen, FileSearch, GraduationCap, KanbanSquare, Lock, MessagesSquare } from "lucide-react";
+import { ArrowRight, Lock } from "lucide-react";
+import { MODULE_ICONS } from "@/components/icons";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,12 +15,12 @@ import { startOfCurrentMonth } from "@/lib/time";
 export const metadata: Metadata = { title: "Início" };
 export const dynamic = "force-dynamic";
 
-const MODULE_CARDS: { module: ModuleCode; href: string; icon: typeof MessagesSquare; description: string }[] = [
-  { module: "crm", href: "/crm", icon: KanbanSquare, description: "Funil de matrículas: lead do WhatsApp, qualificação, proposta de bolsa e taxa de matrícula." },
-  { module: "atendimento", href: "/atendimento", icon: MessagesSquare, description: "Conversas, contatos, departamentos e canais da equipe." },
-  { module: "analise_curricular", href: "/analyses/new", icon: FileSearch, description: "Leia históricos em PDF e calcule dispensas, pendências e previsão de conclusão." },
-  { module: "portal_aluno", href: "/academic-analysis/students", icon: GraduationCap, description: "Área do aluno para enviar documentos e acompanhar solicitações." },
-  { module: "grades_comerciais", href: "/commercial-grades", icon: BookOpen, description: "Catálogo de matrizes de cursos com mensagem pronta para o WhatsApp." },
+const MODULE_CARDS: { module: ModuleCode; href: string; description: string }[] = [
+  { module: "crm", href: "/crm", description: "Funil de matrículas: lead do WhatsApp, qualificação, proposta de bolsa e taxa de matrícula." },
+  { module: "atendimento", href: "/atendimento", description: "Conversas, contatos, departamentos e canais da equipe." },
+  { module: "analise_curricular", href: "/analyses/new", description: "Leia históricos em PDF e calcule dispensas, pendências e previsão de conclusão." },
+  { module: "portal_aluno", href: "/academic-analysis/students", description: "Área do aluno para enviar documentos e acompanhar solicitações." },
+  { module: "grades_comerciais", href: "/commercial-grades", description: "Catálogo de matrizes de cursos com mensagem pronta para o WhatsApp." },
 ];
 
 export default async function HomePage({ searchParams }: PageProps<"/inicio">) {
@@ -72,14 +73,15 @@ export default async function HomePage({ searchParams }: PageProps<"/inicio">) {
         <p className="mb-4 rounded-md bg-status-warning-bg px-3 py-2 text-sm text-status-warning">Você não tem acesso à página solicitada.</p>
       )}
       <div className="grid gap-4 sm:grid-cols-2">
-        {MODULE_CARDS.map(({ module, href, icon: Icon, description }) => {
+        {MODULE_CARDS.map(({ module, href, description }) => {
+          const Icon = MODULE_ICONS[module];
           const enabled = modules.includes(module);
           return (
             <Card key={module} className={enabled ? "shadow-sm transition-shadow hover:shadow-md" : "border-dashed bg-muted/30"}>
               <CardContent className="flex h-full flex-col gap-3 p-5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-2 font-semibold">
-                    <Icon className="size-5 text-brand-cyan-700" /> {MODULES[module]}
+                    <Icon className="size-6 text-brand-navy" /> {MODULES[module]}
                   </span>
                   {enabled ? <Badge variant="secondary">Contratado</Badge> : <Badge variant="outline"><Lock className="size-3" /> Não incluído</Badge>}
                 </div>

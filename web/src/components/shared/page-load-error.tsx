@@ -47,10 +47,10 @@ export function PageLoadError({ error, fullscreen = false }: { error: Error & { 
   return (
     <div className={cn("grid place-items-center px-5", fullscreen ? "min-h-dvh bg-slate-50" : "min-h-[60vh] py-10")}>
       <section className="w-full max-w-md rounded-3xl border bg-white p-8 text-center shadow-sm">
-        <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-[#003B71]/10 text-[#003B71]">
+        <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-brand-navy/10 text-brand-navy">
           <RefreshCw className={cn("size-6", reloading && "animate-spin")} aria-hidden="true" />
         </span>
-        <h1 className="mt-4 text-xl font-semibold text-[#003B71]">
+        <h1 className="mt-4 text-xl font-semibold text-brand-navy">
           {reloading ? "Atualizando o sistema…" : "Não foi possível carregar esta página"}
         </h1>
         <p className="mt-3 text-sm leading-6 text-slate-500">
@@ -63,7 +63,7 @@ export function PageLoadError({ error, fullscreen = false }: { error: Error & { 
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#003B71] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#002a52]"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-navy px-5 py-3 text-sm font-medium text-white transition hover:bg-brand-navy-900"
             >
               <RefreshCw className="size-4" aria-hidden="true" /> Recarregar
             </button>

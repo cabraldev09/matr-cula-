@@ -88,7 +88,7 @@ export default async function AcademicRequestsPage({
       <RequestLiveUpdates
         active={requests.some((r) => r.status === "PROCESSING")}
       />
-      <header className="rounded-2xl bg-gradient-to-br from-[#003B71] to-sky-700 p-6 text-white">
+      <header className="rounded-2xl bg-gradient-to-br from-brand-navy to-sky-700 p-6 text-white">
         <p className="text-xs uppercase tracking-widest text-sky-100">
           Acompanhamento acadêmico
         </p>
@@ -109,7 +109,7 @@ export default async function AcademicRequestsPage({
         {issueRequests > 0 && <span><strong className="text-rose-700 tabular-nums">{issueRequests}</strong> com falha ou recusa</span>}
       </p>
       <TeamPanel insights={insights} showTutor={can(user.role, "academic:all")} />
-      <h2 className="pt-2 text-lg font-semibold text-[#003B71]">Histórico de solicitações</h2>
+      <h2 className="pt-2 text-lg font-semibold text-brand-navy">Histórico de solicitações</h2>
       <form className="grid gap-3 rounded-2xl border bg-white p-5 sm:grid-cols-2 lg:grid-cols-3">
         <input
           name="q"
@@ -160,7 +160,7 @@ export default async function AcademicRequestsPage({
             </option>
           ))}
         </select>
-        <button className="rounded-lg bg-[#003B71] p-3 text-sm font-semibold text-white">
+        <button className="rounded-lg bg-brand-navy p-3 text-sm font-semibold text-white">
           Filtrar solicitações
         </button>
       </form>

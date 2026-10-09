@@ -80,7 +80,7 @@ export function AcademicGridUploadForm({ maxMb }: { maxMb: number }) {
         <span aria-live="polite" className="mt-1 text-sm text-muted-foreground">{sending ? "Documento recebido · extraindo e analisando as páginas…" : file ? `${(file.size / 1024 / 1024).toFixed(2)} MB · clique para trocar` : `Arraste o documento para cá ou selecione um arquivo · até ${maxMb} MB`}</span>
         {sending && <div className="mt-5 w-full max-w-sm text-left" role="status" aria-live="polite" aria-label="Análise do documento em andamento">
           <div className="flex items-center justify-between text-xs font-medium text-slate-600"><span>Leitura do extrato</span><span>Processando páginas</span></div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-label="Processamento do documento em andamento"><div className="h-full w-2/5 rounded-full bg-gradient-to-r from-[#003B71] to-[#0693E3] motion-safe:animate-pulse" /></div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-label="Processamento do documento em andamento"><div className="h-full w-2/5 rounded-full bg-gradient-to-r from-brand-navy to-[#0693E3] motion-safe:animate-pulse" /></div>
           <p className="mt-2 text-center text-xs text-slate-500">Isso pode levar alguns instantes. Após o envio, o processamento continua mesmo que você saia.</p>
         </div>}
       </div>
@@ -91,7 +91,7 @@ export function AcademicGridUploadForm({ maxMb }: { maxMb: number }) {
           checked={confirmed}
           disabled={!file || sending}
           onChange={(event) => setConfirmed(event.target.checked)}
-          className="mt-0.5 size-4 shrink-0 accent-[#003B71]"
+          className="mt-0.5 size-4 shrink-0 accent-brand-navy"
         />
         <span>
           <span className="font-semibold text-slate-900">Confirmação necessária</span>

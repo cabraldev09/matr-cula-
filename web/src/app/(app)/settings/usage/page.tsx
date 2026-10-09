@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Banknote, ChartNoAxesCombined, CircleDollarSign, Cpu, ExternalLink, Users } from "lucide-react";
+import { Banknote, ChartNoAxesCombined, CircleDollarSign, ExternalLink, Users } from "lucide-react";
+import { MeterIcon, type IconComponent } from "@/components/icons";
 import { requirePagePermission } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getSystemSettings } from "@/repositories/settings-repository";
@@ -86,8 +87,8 @@ export default async function UsagePage({ searchParams }: PageProps<"/settings/u
         <Stat icon={Banknote} label="Total adicionado na OpenAI" value={formatCurrencyUSD(totalAddedUsd)} hint={`${formatCurrencyBRL(totalAddedBrl)} pagos em reais`} />
         <Stat icon={CircleDollarSign} label="Adicionado no período" value={formatCurrencyUSD(addedUsd)} hint={`${formatCurrencyBRL(addedBrl)} · ${pluralize(creditHistoryWithValues.length, "recarga")}`} />
         <Stat icon={ChartNoAxesCombined} label="Consumo rastreado pelo sistema" value={formatCurrencyUSD(costUsd)} hint={`${formatCurrencyBRL(costBrl)} · somente esta aplicação`} />
-        <Stat icon={Cpu} label="Tokens no período" value={formatNumber(selected._sum.totalTokens ?? 0)} hint={pluralize(selected._count, "chamada")} />
-        <Stat icon={Cpu} label="Consumo" value={formatNumber(selected._sum.totalTokens ?? 0)} hint={pluralize(selected._count, "chamada")} />
+        <Stat icon={MeterIcon} label="Tokens no período" value={formatNumber(selected._sum.totalTokens ?? 0)} hint={pluralize(selected._count, "chamada")} />
+        <Stat icon={MeterIcon} label="Consumo" value={formatNumber(selected._sum.totalTokens ?? 0)} hint={pluralize(selected._count, "chamada")} />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-5">
@@ -137,7 +138,7 @@ export default async function UsagePage({ searchParams }: PageProps<"/settings/u
   );
 }
 
-function Stat({ icon: Icon, label, value, hint }: { icon: typeof Cpu; label: string; value: string; hint: string }) {
+function Stat({ icon: Icon, label, value, hint }: { icon: IconComponent; label: string; value: string; hint: string }) {
   return <Card className="shadow-sm"><CardContent><div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-muted-foreground"><span>{label}</span><Icon className="size-4 text-brand-cyan-700" /></div><div className="mt-2 text-2xl font-semibold tracking-tight">{value}</div><p className="mt-1 text-xs text-muted-foreground">{hint}</p></CardContent></Card>;
 }
 

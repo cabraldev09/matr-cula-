@@ -55,7 +55,7 @@ export function ConclusionPath({ steps, officialTerms, completion, showLoad = fa
             )}
             {total > 0 && (
               <details open={first} className="group mt-3 rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_-28px_rgba(15,42,66,0.6)] open:border-sky-200">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-[#003B71] [&::-webkit-details-marker]:hidden">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-brand-navy [&::-webkit-details-marker]:hidden">
                   <span className="group-open:hidden">Ver as disciplinas deste semestre</span>
                   <span className="hidden group-open:inline">Disciplinas deste semestre</span>
                   <span aria-hidden="true" className="text-slate-400 transition-transform group-open:rotate-180">⌄</span>
@@ -81,11 +81,11 @@ export function ConclusionPath({ steps, officialTerms, completion, showLoad = fa
         );
       })}
       <li className="relative pl-8 sm:pl-10">
-        <span aria-hidden="true" className="absolute -left-1 top-0 grid size-6 place-items-center rounded-full bg-[#003B71] text-[#FEF84C] ring-4 ring-[#FEF84C]/30 sm:left-0">
+        <span aria-hidden="true" className="absolute -left-1 top-0 grid size-6 place-items-center rounded-full bg-brand-navy text-brand-gold ring-4 ring-brand-gold/30 sm:left-0">
           <GraduationCap className="size-3.5" />
         </span>
         <p className="text-xs font-semibold tracking-[0.12em] text-slate-500 uppercase">Conclusão prevista</p>
-        <p className="mt-0.5 text-2xl font-semibold tracking-tight text-[#003B71] tabular-nums">{completion ?? "Em cálculo"}</p>
+        <p className="mt-0.5 text-2xl font-semibold tracking-tight text-brand-navy tabular-nums">{completion ?? "Em cálculo"}</p>
       </li>
     </ol>
   );

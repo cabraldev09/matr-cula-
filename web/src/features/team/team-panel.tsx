@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, FileWarning, GraduationCap, KeyRound, Mail, Rocket, Trash2, UserPlus, Waypoints, type LucideIcon } from "lucide-react";
+import { StepsIcon, type IconComponent } from "@/components/icons";
+import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, FileWarning, GraduationCap, KeyRound, Mail, Trash2, UserPlus, Waypoints, type LucideIcon } from "lucide-react";
 import type { ActionItem, AdvanceItem, AttentionItem, GraduatingItem, TeamInsights } from "@/services/student-portal/team-insights";
 import { readableName } from "@/lib/text";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,7 @@ const ACTION_META: Record<ActionItem["kind"], { label: string; icon: LucideIcon;
   OUTDATED: { label: "Análise desatualizada", icon: CalendarClock, tone: "bg-slate-100 text-slate-700", cta: "Ver aluno" },
 };
 
-function Section({ icon: Icon, tone, title, description, count, children, id }: { icon: LucideIcon; tone: string; title: string; description: string; count: number; children: React.ReactNode; id: string }) {
+function Section({ icon: Icon, tone, title, description, count, children, id }: { icon: LucideIcon | IconComponent; tone: string; title: string; description: string; count: number; children: React.ReactNode; id: string }) {
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
       <div className="flex items-start gap-3">
@@ -95,7 +96,7 @@ export function TeamPanel({ insights, showTutor }: { insights: TeamInsights; sho
                       <Student name={item.name} rgm={item.rgm} tutor={item.tutor.name} showTutor={showTutor} />
                       <span className="mt-0.5 block text-xs text-slate-600">{item.detail}</span>
                     </span>
-                    <Link href={item.href} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-[#003B71] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#07558f]">
+                    <Link href={item.href} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-brand-navy px-3 text-xs font-semibold text-white transition-colors hover:bg-brand-navy-700">
                       {meta.cta} <ArrowRight className="size-3.5" />
                     </Link>
                   </li>
@@ -106,7 +107,7 @@ export function TeamPanel({ insights, showTutor }: { insights: TeamInsights; sho
         )}
       </Section>
 
-      <Section id="podem-avancar" icon={Rocket} tone="bg-sky-50 text-sky-700" title="Podem avançar agora" description="Alunos com pendências e vaga livre neste semestre. Cada inclusão adianta a formatura — vale o contato." count={insights.canAdvance.length}>
+      <Section id="podem-avancar" icon={StepsIcon} tone="bg-sky-50 text-sky-700" title="Podem avançar agora" description="Alunos com pendências e vaga livre neste semestre. Cada inclusão adianta a formatura — vale o contato." count={insights.canAdvance.length}>
         {insights.canAdvance.length === 0 ? (
           <Empty>Nenhum aluno com vaga livre para pendências neste momento.</Empty>
         ) : (
@@ -126,7 +127,7 @@ export function TeamPanel({ insights, showTutor }: { insights: TeamInsights; sho
                 <span className="flex flex-wrap gap-2">
                   <CopyMessageButton message={item.message} />
                   {item.email && (
-                    <a href={`mailto:${item.email}?subject=${encodeURIComponent("Você pode adiantar a sua formatura")}&body=${encodeURIComponent(item.message)}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#003B71] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#07558f]">
+                    <a href={`mailto:${item.email}?subject=${encodeURIComponent("Você pode adiantar a sua formatura")}&body=${encodeURIComponent(item.message)}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-brand-navy px-3 text-xs font-semibold text-white transition-colors hover:bg-brand-navy-700">
                       <Mail className="size-3.5" /> Enviar e-mail
                     </a>
                   )}

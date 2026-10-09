@@ -152,7 +152,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
             <div className="mt-5 flex flex-wrap gap-2">
               <form action={viewStudentPortalAction}>
                 <input name="enrollmentId" type="hidden" value={id} />
-                <Button className="h-10 bg-white text-[#003B71] shadow-lg hover:bg-cyan-50">
+                <Button className="h-10 bg-white text-brand-navy shadow-lg hover:bg-cyan-50">
                   <Eye className="size-4" /> Visualizar como aluno
                 </Button>
               </form>
@@ -214,7 +214,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
         </div>
 
         <section id="historico" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_16px_40px_-36px_rgba(15,42,66,0.62)] sm:p-6">
-          <h2 className="text-lg font-semibold text-[#003B71]">Linha do tempo</h2>
+          <h2 className="text-lg font-semibold text-brand-navy">Linha do tempo</h2>
           <p className="mt-1 text-xs text-slate-500">
             {requests} envio(s) · {reused} reaproveitamento(s) sem nova análise
           </p>

@@ -9,7 +9,7 @@ export default function PortalError({ error, reset }: { error: Error & { digest?
   return (
     <main className="grid min-h-dvh place-items-center bg-slate-50 px-5">
       <section className="max-w-md rounded-3xl border bg-white p-8 text-center">
-        <h1 className="text-2xl font-semibold text-[#003B71]">
+        <h1 className="text-2xl font-semibold text-brand-navy">
           Vamos tentar novamente?
         </h1>
         <p className="mt-4 text-sm leading-6 text-slate-500">
@@ -18,7 +18,7 @@ export default function PortalError({ error, reset }: { error: Error & { digest?
         </p>
         <button
           onClick={reset}
-          className="mt-6 min-h-11 w-full rounded-xl bg-[#003B71] px-5 py-3 font-medium text-white"
+          className="mt-6 min-h-11 w-full rounded-xl bg-brand-navy px-5 py-3 font-medium text-white"
         >
           Tentar novamente
         </button>

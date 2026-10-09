@@ -125,7 +125,7 @@ export default async function StudentsPage({
           >
             Análise Acadêmica
           </Link>
-          <h1 className="mt-2 bg-gradient-to-r from-[#003B71] via-[#0a5a9a] to-[#0693e3] bg-clip-text text-3xl font-semibold tracking-tight text-transparent">
+          <h1 className="mt-2 bg-gradient-to-r from-brand-navy via-brand-navy-700 to-brand-cyan bg-clip-text text-3xl font-semibold tracking-tight text-transparent">
             Alunos
           </h1>
           <p className="mt-2 text-sm text-slate-600">
@@ -205,7 +205,7 @@ export default async function StudentsPage({
                   <tr key={student.id} className="group transition-colors hover:bg-sky-50/60">
                     <td className="min-w-48 px-5 py-4 font-medium">
                       <span className="flex items-center gap-3">
-                        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#003B71] to-[#0693e3] text-xs font-semibold text-white shadow-sm transition-transform group-hover:scale-105">
+                        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-navy to-brand-cyan text-xs font-semibold text-white shadow-sm transition-transform group-hover:scale-105">
                           {student.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
                         </span>
                         <span className="min-w-0">
@@ -241,7 +241,7 @@ export default async function StudentsPage({
                     </td>
                     <td className="whitespace-nowrap px-5 py-4">
                       <Link
-                        className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-brand-cyan/25 px-3 py-2 font-medium text-[#003B71] transition-all hover:border-brand-cyan hover:bg-brand-cyan hover:text-white hover:shadow-[0_8px_20px_-10px_rgb(6_147_227)]"
+                        className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-brand-cyan/25 px-3 py-2 font-medium text-brand-navy transition-all hover:border-brand-cyan hover:bg-brand-cyan hover:text-white hover:shadow-[0_8px_20px_-10px_rgb(6_147_227)]"
                         href={`/academic-analysis/students/${student.id}`}
                       >
                         Abrir aluno
@@ -271,7 +271,7 @@ export default async function StudentsPage({
       {legacy.length > 0 && (
         <section id="analises-sem-acesso" className="rounded-2xl border bg-white p-5">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-semibold text-[#003B71]">
+            <h2 className="font-semibold text-brand-navy">
               Análises existentes · sem acesso
             </h2>
             <span className="text-sm text-slate-500">{legacyCount} registro(s)</span>

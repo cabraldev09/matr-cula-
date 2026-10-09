@@ -28,7 +28,7 @@ export function ContactRow({ role, contact, message, highlight = false, delay = 
           : "border-transparent bg-white/70 hover:border-slate-200 hover:bg-white hover:shadow-[0_12px_28px_-22px_#003b71]",
       )}
     >
-      <span aria-hidden="true" className="relative grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#0693E3] to-[#003B71] text-sm font-semibold text-white shadow-[0_8px_18px_-10px_#0693E3] transition-transform duration-300 group-hover:scale-105">
+      <span aria-hidden="true" className="relative grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#0693E3] to-brand-navy text-sm font-semibold text-white shadow-[0_8px_18px_-10px_#0693E3] transition-transform duration-300 group-hover:scale-105">
         {initials(contact.name)}
       </span>
       <span className="min-w-0 flex-1">
@@ -54,7 +54,7 @@ export function ContactRow({ role, contact, message, highlight = false, delay = 
             href={`mailto:${contact.email}`}
             aria-label={`Enviar e-mail para ${contact.name}`}
             title={contact.email}
-            className="grid size-10 place-items-center rounded-full border border-slate-200 bg-white text-[#003B71] transition-[transform,border-color,background-color] duration-200 hover:-translate-y-0.5 hover:border-brand-cyan/40 hover:bg-brand-cyan-50 active:scale-95"
+            className="grid size-10 place-items-center rounded-full border border-slate-200 bg-white text-brand-navy transition-[transform,border-color,background-color] duration-200 hover:-translate-y-0.5 hover:border-brand-cyan/40 hover:bg-brand-cyan-50 active:scale-95"
           >
             <Mail className="size-[18px]" />
           </a>
@@ -77,12 +77,12 @@ function readStored(key: string) {
 function PoloHeader({ entry, label, action }: { entry: PoloDirectoryEntry | null; label: string; action?: React.ReactNode }) {
   return (
     <div className="flex w-full items-center gap-3 text-left">
-      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#FEF84C] to-[#f7d24a] text-[#003B71] shadow-[0_8px_18px_-12px_#c9a800]">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-gold to-[#f7d24a] text-brand-navy shadow-[0_8px_18px_-12px_#c9a800]">
         <MapPin className="size-[18px]" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[10px] font-semibold tracking-[0.14em] text-slate-400 uppercase">{label}</span>
-        <span className="block text-sm leading-5 font-semibold text-[#003B71]">{entry ? entry.city : "Toque no seu polo abaixo"}</span>
+        <span className="block text-sm leading-5 font-semibold text-brand-navy">{entry ? entry.city : "Toque no seu polo abaixo"}</span>
         {entry?.area && <span className="block text-xs leading-4 text-slate-500">{entry.area}</span>}
       </span>
       {action}
@@ -109,7 +109,7 @@ function PoloGrid({ directory, code, expanded, onChoose, id }: { directory: Polo
                   "relative min-h-12 rounded-xl border px-3 py-2 text-left text-xs transition-[background-color,border-color,transform,box-shadow] duration-200 active:scale-[.98]",
                   expanded && "polo-in",
                   active
-                    ? "border-[#003B71] bg-[#003B71] text-white shadow-[0_10px_22px_-14px_#003b71]"
+                    ? "border-brand-navy bg-brand-navy text-white shadow-[0_10px_22px_-14px_#003b71]"
                     : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-brand-cyan/40 hover:bg-brand-cyan-50/60",
                 )}
               >
@@ -248,7 +248,7 @@ export function StudentPoloContacts({ directory, message, poloCode, ownerEmail, 
             type="button"
             onClick={confirm}
             disabled={pending || !canConfirm}
-            className="polo-in mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#003B71] px-4 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_#003b71] transition-[background-color,transform] duration-200 hover:bg-[#07558f] active:scale-[.99] disabled:opacity-60"
+            className="polo-in mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-navy px-4 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_#003b71] transition-[background-color,transform] duration-200 hover:bg-brand-navy-700 active:scale-[.99] disabled:opacity-60"
           >
             <Check className="size-4" /> {pending ? "Confirmando…" : `Confirmar ${selected.city}${selected.area ? ` · ${selected.area}` : ""}`}
           </button>

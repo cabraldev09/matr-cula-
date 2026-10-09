@@ -14,11 +14,16 @@
 
   /* Derivados (tons) */
   --brand-navy-900: #00284d;
+  --brand-navy-700: #0a5a9a;
   --brand-navy-50: #e8f2fa;
   --brand-cyan-50: #e9f6fe;
   --brand-cyan-700: #0578bb;
+  --brand-cyan-400: #38b6f5;
   --brand-gold-50: #fffde1;
   --brand-gold-700: #8b8100;
+  /* Detalhe dos ícones próprios; sobre fundo escuro usa o ciano claro. */
+  --icon-accent: var(--brand-cyan);
+  --icon-accent-on-dark: #5fcdfb;
 
   /* Semânticos de status */
   --status-success: #1d8a5a;

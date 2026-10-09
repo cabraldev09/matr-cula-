@@ -45,7 +45,7 @@ export function AcademicDashboardOverview({
 
   return (
     <section aria-label="Resumo da trajetória acadêmica" className="grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.9fr)]">
-      <article className="relative isolate overflow-hidden rounded-2xl border border-[#003B71]/15 bg-[linear-gradient(135deg,#003B71_0%,#07558f_64%,#087db0_100%)] p-5 text-white shadow-[0_20px_48px_-32px_rgba(0,59,113,0.78)] sm:p-7">
+      <article className="relative isolate overflow-hidden rounded-2xl border border-brand-navy/15 bg-[linear-gradient(135deg,#003B71_0%,#07558f_64%,#087db0_100%)] p-5 text-white shadow-[0_20px_48px_-32px_rgba(0,59,113,0.78)] sm:p-7">
         <div aria-hidden="true" className="pointer-events-none absolute -right-14 -top-24 -z-10 size-72 rounded-full bg-cyan-200/10 blur-3xl" />
         <DotPattern className="-z-10 text-white/10" />
         <div className="flex flex-wrap items-start justify-between gap-4">

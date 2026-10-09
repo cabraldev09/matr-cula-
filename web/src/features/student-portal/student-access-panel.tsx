@@ -183,7 +183,7 @@ export function CreateStudentForm({
           <Link
             href={`/academic-analysis/students/${result.enrollmentId}`}
             onClick={() => router.refresh()}
-            className="mt-4 block text-sm font-medium text-[#003B71] underline"
+            className="mt-4 block text-sm font-medium text-brand-navy underline"
           >
             Abrir cadastro do aluno
           </Link>

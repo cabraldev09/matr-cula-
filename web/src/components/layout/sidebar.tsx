@@ -3,32 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { ChevronDown, PanelLeftClose, X } from "lucide-react";
 import {
-  BookOpen,
-  Building2,
-  ChartColumnIncreasing,
-  ChevronDown,
-  ClipboardCheck,
-  Contact,
-  CreditCard,
-  FilePlus2,
-  Files,
-  FileText,
-  KanbanSquare,
-  Library,
-  GraduationCap,
-  Home,
-  Inbox,
-  MessagesSquare,
-  PanelLeftClose,
-  RadioTower,
-  Settings,
-  ShieldCheck,
-  UserRound,
-  Users,
-  UsersRound,
-  X,
-} from "lucide-react";
+  AccountIcon, AnalysesIcon, ChannelsIcon, ChatIcon, CompanyIcon, ContactsIcon, CoursesIcon, FunnelIcon, GradesIcon, HomeIcon,
+  NewAnalysisIcon, PeopleIcon, PlanIcon, PlatformIcon, ProposalIcon, ReportsIcon, RequestsIcon, ReviewIcon, SettingsIcon,
+  StepsIcon, StudentsIcon, TeamsIcon, type IconComponent,
+} from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { can } from "@/lib/rbac";
 import { NAV_SECTIONS, SETTINGS_NAV, type NavContext, type NavIcon, type NavItem, type SettingsNavItem } from "@/components/layout/nav-items";
@@ -36,29 +16,29 @@ import { BrandLogo } from "@/components/shared/brand-logo";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-const ICONS: Record<NavIcon, typeof Home> = {
-  home: Home,
-  chat: MessagesSquare,
-  contacts: Contact,
-  channels: RadioTower,
-  teams: UsersRound,
-  new: FilePlus2,
-  list: Files,
-  review: ClipboardCheck,
-  academic: GraduationCap,
-  requests: Inbox,
-  students: Users,
-  grades: BookOpen,
-  reports: ChartColumnIncreasing,
-  settings: Settings,
-  company: Building2,
-  people: Users,
-  plan: CreditCard,
-  account: UserRound,
-  platform: ShieldCheck,
-  funnel: KanbanSquare,
-  proposals: FileText,
-  courses: Library,
+const ICONS: Record<NavIcon, IconComponent> = {
+  home: HomeIcon,
+  chat: ChatIcon,
+  contacts: ContactsIcon,
+  channels: ChannelsIcon,
+  teams: TeamsIcon,
+  new: NewAnalysisIcon,
+  list: AnalysesIcon,
+  review: ReviewIcon,
+  academic: StepsIcon,
+  requests: RequestsIcon,
+  students: StudentsIcon,
+  grades: GradesIcon,
+  reports: ReportsIcon,
+  settings: SettingsIcon,
+  company: CompanyIcon,
+  people: PeopleIcon,
+  plan: PlanIcon,
+  account: AccountIcon,
+  platform: PlatformIcon,
+  funnel: FunnelIcon,
+  proposals: ProposalIcon,
+  courses: CoursesIcon,
 };
 
 function visible(item: NavItem | SettingsNavItem, nav: NavContext): boolean {
@@ -106,12 +86,12 @@ export function Sidebar({ nav, onNavigate, onClose, variant = "rail" }: { nav: N
       "group/nav relative flex items-center justify-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
       expanded ? "justify-start" : mode === "auto" && "xl:justify-start",
       active
-        ? "bg-gradient-to-r from-sidebar-primary to-[#38b6f5] text-sidebar-primary-foreground shadow-[0_8px_24px_-10px_rgb(6_147_227/0.9)]"
+        ? "bg-gradient-to-r from-sidebar-primary to-brand-cyan-400 text-sidebar-primary-foreground shadow-[0_8px_24px_-10px_rgb(6_147_227/0.9)]"
         : "text-sidebar-foreground/85 hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-white",
     );
 
   return (
-    <aside className={cn("relative z-30 flex flex-col bg-sidebar text-sidebar-foreground", drawer ? "h-full w-full" : "h-screen min-h-screen transition-[width] duration-300", !drawer && (mode === "expanded" ? "w-64" : mode === "collapsed" ? "w-16" : "w-16 xl:w-64"))}>
+    <aside data-sidebar className={cn("relative z-30 flex flex-col bg-sidebar text-sidebar-foreground", drawer ? "h-full w-full" : "h-screen min-h-screen transition-[width] duration-300", !drawer && (mode === "expanded" ? "w-64" : mode === "collapsed" ? "w-16" : "w-16 xl:w-64"))}>
       <div className={cn("flex items-center pb-4 pt-5 text-white", expanded ? "justify-between px-5" : mode === "collapsed" ? "justify-center px-3" : "justify-center px-3 xl:justify-between xl:px-5")}>
         {mode === "collapsed" ? (
           <button type="button" onClick={toggle} className="rounded-md p-1 text-white focus:outline-none focus:ring-2 focus:ring-sidebar-primary" aria-label="Expandir menu lateral" title="Expandir menu lateral">
@@ -149,7 +129,7 @@ export function Sidebar({ nav, onNavigate, onClose, variant = "rail" }: { nav: N
 
         {nav.platformAdmin && (
           <Link href="/admin" onClick={onNavigate} title="Plataforma" className={linkClass(pathname.startsWith("/admin"))}>
-            <ShieldCheck className="size-4" />
+            <PlatformIcon className="size-4" />
             <span className={labels}>Plataforma</span>
           </Link>
         )}
@@ -157,7 +137,7 @@ export function Sidebar({ nav, onNavigate, onClose, variant = "rail" }: { nav: N
         {settingsItems.length > 0 && (
           <Collapsible defaultOpen={inSettings} className={sectionLabels}>
             <CollapsibleTrigger className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors", inSettings ? "text-white" : "text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-white")}>
-              <Settings className="size-4" />
+              <SettingsIcon className="size-4" />
               Configurações
               <ChevronDown className="ml-auto size-4 opacity-60 transition-transform [[data-state=open]_&]:rotate-180" />
             </CollapsibleTrigger>
@@ -179,7 +159,7 @@ export function Sidebar({ nav, onNavigate, onClose, variant = "rail" }: { nav: N
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button type="button" title="Configurações" className={cn("flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm font-medium transition-colors", mode === "auto" && "xl:hidden", inSettings ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm" : "text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-white")}>
-                <Settings className="size-4" />
+                <SettingsIcon className="size-4" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" className="w-52">

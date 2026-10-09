@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Flame, MessageCircle, Plus, Search, UserRound } from "lucide-react";
+import { Plus, Search } from "lucide-react";
+import { AccountIcon, ChatIcon, TemperatureIcon } from "@/components/icons";
+import { PersonAvatar } from "@/components/shared/person-avatar";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -168,12 +170,15 @@ export function CrmBoard(props: BoardProps) {
                       )}
                     >
                       <span className="flex items-start justify-between gap-2">
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-semibold">{lead.contacts?.name ?? "Lead"}</span>
-                          <span className="block truncate text-xs text-muted-foreground">{lead.course_id ? courseName.get(lead.course_id) : "Curso não informado"}</span>
+                        <span className="flex min-w-0 items-center gap-2">
+                          <PersonAvatar name={lead.contacts?.name ?? "Lead"} size="sm" />
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-semibold">{lead.contacts?.name ?? "Lead"}</span>
+                            <span className="block truncate text-xs text-muted-foreground">{lead.course_id ? courseName.get(lead.course_id) : "Curso não informado"}</span>
+                          </span>
                         </span>
                         <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1", TEMPERATURE[lead.temperature].className)}>
-                          {lead.temperature === "quente" && <Flame className="size-3" />} {TEMPERATURE[lead.temperature].label}
+                          <TemperatureIcon level={lead.temperature} className="size-3.5" /> {TEMPERATURE[lead.temperature].label}
                         </span>
                       </span>
                       <span className="mt-2 block h-1 overflow-hidden rounded-full bg-muted">
@@ -181,7 +186,7 @@ export function CrmBoard(props: BoardProps) {
                       </span>
                       <span className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          {lead.source === "whatsapp" ? <MessageCircle className="size-3 text-emerald-600" /> : <UserRound className="size-3" />}
+                          {lead.source === "whatsapp" ? <ChatIcon className="size-3.5 text-emerald-600" /> : <AccountIcon className="size-3.5" />}
                           {lead.owner_id ? (memberName.get(lead.owner_id) ?? "Equipe").split(" ")[0] : "Sem responsável"}
                         </span>
                         <span>{formatRelativeTime(lead.stage_changed_at)}</span>

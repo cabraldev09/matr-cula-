@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { AlertTriangle, Check, CheckCircle2, ChevronDown, FileSearch, Info, Loader2, Pencil, Plus, RefreshCw, Wand2 } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, FileSearch, Info, Loader2, Pencil, Plus, RefreshCw } from "lucide-react";
+import { ApplyFixesIcon } from "@/components/icons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn, formatDateTime, ordinal, pluralize } from "@/lib/utils";
@@ -82,7 +83,7 @@ export function AuditTab({ vm, canEdit, onLocateSubject, onEditSubject }: { vm: 
           <div className="flex shrink-0 flex-wrap gap-2">
             {withSuggestion.length > 0 && (
               <Button size="sm" onClick={() => run("all", () => applyAllSuggestionsAction({ analysisId: vm.id }))} disabled={pending}>
-                {busyId === "all" ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />} Aplicar sugestões ({withSuggestion.length})
+                {busyId === "all" ? <Loader2 className="size-4 animate-spin" /> : <ApplyFixesIcon className="size-4" />} Aplicar sugestões ({withSuggestion.length})
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={() => run("reaudit", () => reauditAnalysisAction(vm.id))} disabled={pending}>
