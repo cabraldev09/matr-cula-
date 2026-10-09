@@ -7,10 +7,9 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getSessionContext } from "@/lib/session";
-import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma";
 import { MODULES, type ModuleCode } from "@/lib/modules";
-import { startOfCurrentMonth } from "@/lib/time";
+import { loadWorkPanel } from "@/features/home/queries";
+import { LeadList, PlanUsage, PriorityList, QuickActions } from "@/features/home/work-panel";
 
 export const metadata: Metadata = { title: "Início" };
 export const dynamic = "force-dynamic";
@@ -30,33 +29,22 @@ export default async function HomePage({ searchParams }: PageProps<"/inicio">) {
   const modules = context.entitlements?.modules ?? [];
   const manager = context.organization.role === "owner" || context.organization.role === "admin";
 
-  const [activeLeads, openConversations, analysesThisMonth] = await Promise.all([
-    modules.includes("crm")
-      ? (await createClient())
-          .from("leads")
-          .select("id", { count: "exact", head: true })
-          .eq("organization_id", context.organization.organizationId)
-          .not("stage", "in", "(matriculado,perdido)")
-          .then((r) => r.count ?? 0)
-      : Promise.resolve(null),
-    modules.includes("atendimento")
-      ? (await createClient())
-          .from("conversations")
-          .select("id", { count: "exact", head: true })
-          .eq("organization_id", context.organization.organizationId)
-          .neq("status", "closed")
-          .then((r) => r.count ?? 0)
-      : Promise.resolve(null),
-    modules.includes("analise_curricular")
-      ? prisma.curricularAnalysis.count({ where: { createdAt: { gte: startOfCurrentMonth() } } })
-      : Promise.resolve(null),
-  ]);
-
+  const now = new Date();
+  const panel = await loadWorkPanel({
+    organizationId: context.organization.organizationId,
+    userId: context.authUserId,
+    manager,
+    modules,
+    entitlements: context.entitlements,
+    now,
+  });
+  const { activeLeads, openConversations, analysesThisMonth } = panel.counts;
   const stats: Partial<Record<ModuleCode, string>> = {
     ...(activeLeads !== null ? { crm: `${activeLeads} lead${activeLeads === 1 ? "" : "s"} no funil` } : {}),
     ...(openConversations !== null ? { atendimento: `${openConversations} conversa${openConversations === 1 ? "" : "s"} em aberto` } : {}),
     ...(analysesThisMonth !== null ? { analise_curricular: `${analysesThisMonth} análise${analysesThisMonth === 1 ? "" : "s"} neste mês` } : {}),
   };
+  const hasWork = modules.some((m) => m === "crm" || m === "atendimento");
 
   return (
     <>
@@ -72,6 +60,23 @@ export default async function HomePage({ searchParams }: PageProps<"/inicio">) {
       {params.forbidden === "1" && (
         <p className="mb-4 rounded-md bg-status-warning-bg px-3 py-2 text-sm text-status-warning">Você não tem acesso à página solicitada.</p>
       )}
+      {hasWork && (
+        <div className="mb-8 space-y-5">
+          <section aria-labelledby="agora" className="space-y-3">
+            <h2 id="agora" className="text-lg font-semibold">Agora</h2>
+            <PriorityList priorities={panel.priorities} />
+          </section>
+          {modules.includes("crm") && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <LeadList title={panel.scope === "equipe" ? "Leads quentes" : "Meus leads quentes"} hint="Maior pontuação primeiro" leads={panel.hotLeads} now={now} empty="Nenhum lead quente por enquanto." />
+              <LeadList title={panel.scope === "equipe" ? "Leads parados" : "Meus leads parados"} hint="Mais de 3 dias na mesma etapa" leads={panel.staleLeads} now={now} empty="Nenhum lead parado. Bom trabalho." />
+            </div>
+          )}
+          <PlanUsage usage={panel.usage} />
+          <QuickActions modules={modules} />
+        </div>
+      )}
+      <h2 className="mb-3 text-lg font-semibold">Seus módulos</h2>
       <div className="grid gap-4 sm:grid-cols-2">
         {MODULE_CARDS.map(({ module, href, description }) => {
           const Icon = MODULE_ICONS[module];

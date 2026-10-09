@@ -6,36 +6,18 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getSessionContext, getSessionUser } from "@/lib/session";
-import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/rbac";
-import { startOfCurrentMonth } from "@/lib/time";
-import { loadMembers } from "@/features/attendance/members";
-import type { Prisma } from "@/generated/prisma/client";
-import { STAGES } from "@/features/crm/labels";
+import { zonedDayKey } from "@/lib/time";
 import { money } from "@/domain/proposal/document";
+import { DailyBars, HorizontalBars } from "@/features/reports/charts";
+import { PeriodFilter } from "@/features/reports/period-filter";
+import { resolvePeriod, type ReportPeriod } from "@/features/reports/period";
+import { analysisReport, attendanceReport, crmReport, ROW_LIMIT } from "@/features/reports/queries";
+import { ReportTabs, type ReportTab } from "@/features/reports/report-tabs";
+import { StatCard } from "@/features/reports/stat-card";
 
 export const metadata: Metadata = { title: "Relatórios" };
 export const dynamic = "force-dynamic";
-
-const PERIODS = [
-  ["mes", "Este mês"],
-  ["30d", "Últimos 30 dias"],
-  ["90d", "Últimos 90 dias"],
-] as const;
-
-function periodStart(period: string, now: Date): Date {
-  if (period === "30d") return new Date(now.getTime() - 30 * 86_400_000);
-  if (period === "90d") return new Date(now.getTime() - 90 * 86_400_000);
-  return startOfCurrentMonth(now);
-}
-
-function median(values: number[]): number | null {
-  if (!values.length) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
-}
 
 function formatDuration(ms: number | null): string {
   if (ms === null) return "—";
@@ -45,162 +27,92 @@ function formatDuration(ms: number | null): string {
   return hours < 24 ? `${hours} h ${minutes % 60} min` : `${Math.floor(hours / 24)} d ${hours % 24} h`;
 }
 
-function Stat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
+function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <Card className="shadow-sm">
-      <CardContent className="space-y-1 p-4">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-2xl font-semibold tabular-nums">{value}</p>
-        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-      </CardContent>
+      <CardHeader className="pb-2"><CardTitle className="text-sm">{title}</CardTitle></CardHeader>
+      <CardContent>{children}</CardContent>
     </Card>
   );
 }
 
-function Ranking({ title, rows, empty }: { title: string; rows: [string, number][]; empty: string }) {
-  const max = Math.max(1, ...rows.map(([, value]) => value));
+function Truncated() {
+  return <p className="rounded-lg border border-status-warning/40 bg-status-warning-bg px-3 py-2 text-sm text-status-warning">O período tem mais de {ROW_LIMIT.toLocaleString("pt-BR")} registros. Os números abaixo usam os mais recentes; escolha um período menor para ver tudo.</p>;
+}
+
+type Crm = Awaited<ReturnType<typeof crmReport>>;
+type Attendance = Awaited<ReturnType<typeof attendanceReport>>;
+type Analysis = Awaited<ReturnType<typeof analysisReport>>;
+
+function CrmSection({ crm, period }: { crm: Crm; period: ReportPeriod }) {
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{empty}</p>
-        ) : (
-          <ul className="space-y-2 text-sm">
-            {rows.map(([label, value]) => (
-              <li key={label} className="space-y-1">
-                <span className="flex justify-between gap-2"><span className="truncate">{label}</span><span className="tabular-nums">{value}</span></span>
-                <span className="block h-1.5 rounded-full bg-muted"><span className="block h-1.5 rounded-full bg-brand-cyan" style={{ width: `${(value / max) * 100}%` }} /></span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+    <>
+      {crm.truncated && <Truncated />}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">Funil de matrículas · {period.label}</h2>
+        <Button asChild size="sm" variant="outline"><Link href="/crm">Abrir CRM</Link></Button>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Leads no período" value={crm.total} hint={`${crm.open} ainda em andamento · ${crm.lost} perdidos`} change={crm.totalChange} />
+        <StatCard label="Receberam proposta" value={crm.proposals} hint={`${crm.percentOf(crm.proposals)} dos leads`} />
+        <StatCard label="Taxa paga" value={crm.paidLeads} hint={`${crm.percentOf(crm.paidLeads)} dos leads · ${crm.enrolled} matriculados`} />
+        <StatCard label="Taxas recebidas" value={money(crm.feesCents / 100)} hint={`${crm.feesCount} pagamento${crm.feesCount === 1 ? "" : "s"} confirmado${crm.feesCount === 1 ? "" : "s"}`} change={crm.feesChange} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartCard title="Leads por dia"><DailyBars data={crm.series} label="Leads por dia" /></ChartCard>
+        <ChartCard title="Leads por etapa atual"><HorizontalBars rows={crm.byStage} label="Leads por etapa atual" /></ChartCard>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <ChartCard title="Motivos de perda"><HorizontalBars rows={crm.lostReasons.map(([label, value]) => ({ label, value }))} label="Motivos de perda" color="var(--status-danger)" /></ChartCard>
+        <ChartCard title="Leads por curso"><HorizontalBars rows={crm.byCourse.map(([label, value]) => ({ label, value }))} label="Leads por curso" /></ChartCard>
+        <ChartCard title="Leads por responsável"><HorizontalBars rows={crm.byOwner.map(([label, value]) => ({ label, value }))} label="Leads por responsável" color="var(--chart-4)" /></ChartCard>
+      </div>
+      <ChartCard title="Leads por origem"><HorizontalBars rows={crm.bySource.map(([label, value]) => ({ label, value }))} label="Leads por origem" color="var(--chart-2)" /></ChartCard>
+    </>
   );
 }
 
-function top(map: Map<string, number>, limit = 8): [string, number][] {
-  return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
+function AttendanceSection({ attendance, period }: { attendance: Attendance; period: ReportPeriod }) {
+  return (
+    <>
+      {attendance.truncated && <Truncated />}
+      <h2 className="text-lg font-semibold">Atendimento · {period.label}</h2>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Conversas no período" value={attendance.created} hint={`${attendance.closed} encerradas`} change={attendance.createdChange} />
+        <StatCard label="Agora" value={`${attendance.pendingNow} aguardando`} hint={`${attendance.openNow} em atendimento`} />
+        <StatCard label="Primeira resposta (mediana)" value={formatDuration(attendance.firstResponse)} hint={`${attendance.answered} conversas respondidas`} />
+        <StatCard label="Mensagens" value={attendance.incoming + attendance.outgoing} hint={`${attendance.incoming} recebidas · ${attendance.outgoing} enviadas`} change={attendance.messagesChange} />
+      </div>
+      <ChartCard title="Conversas novas por dia"><DailyBars data={attendance.series} label="Conversas novas por dia" color="var(--chart-1)" /></ChartCard>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartCard title="Conversas encerradas por atendente"><HorizontalBars rows={attendance.byAgent.map(([label, value]) => ({ label, value }))} label="Conversas encerradas por atendente" /></ChartCard>
+        <ChartCard title="Conversas por departamento"><HorizontalBars rows={attendance.byTeam.map(([label, value]) => ({ label, value }))} label="Conversas por departamento" color="var(--chart-4)" /></ChartCard>
+      </div>
+    </>
+  );
 }
 
-async function attendanceReport(organizationId: string, from: Date) {
-  const supabase = await createClient();
-  const since = from.toISOString();
-  const [{ data: conversations }, { count: openNow }, { count: pendingNow }, { data: messages }, members, { data: teams }] = await Promise.all([
-    supabase.from("conversations").select("id, status, assigned_to, team_id, created_at, updated_at").eq("organization_id", organizationId).gte("created_at", since).limit(5000),
-    supabase.from("conversations").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("status", "open"),
-    supabase.from("conversations").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("status", "pending"),
-    supabase.from("messages").select("conversation_id, direction, created_at").eq("organization_id", organizationId).gte("created_at", since).order("created_at").limit(20000),
-    loadMembers(supabase, organizationId),
-    supabase.from("teams").select("id, name").eq("organization_id", organizationId),
-  ]);
-  const names = new Map(members.map((m) => [m.id, m.name]));
-  const teamNames = new Map((teams ?? []).map((t) => [t.id as string, t.name as string]));
-  const rows = conversations ?? [];
-  const byAgent = new Map<string, number>();
-  const byTeam = new Map<string, number>();
-  for (const row of rows) {
-    if (row.status === "closed" && row.assigned_to) byAgent.set(names.get(row.assigned_to) ?? "Atendente", (byAgent.get(names.get(row.assigned_to) ?? "Atendente") ?? 0) + 1);
-    const team = row.team_id ? (teamNames.get(row.team_id) ?? "Departamento") : "Sem departamento";
-    byTeam.set(team, (byTeam.get(team) ?? 0) + 1);
-  }
-  // Primeira resposta: da primeira mensagem do cliente até a primeira mensagem da equipe na mesma conversa.
-  const firstIncoming = new Map<string, number>();
-  const firstReply = new Map<string, number>();
-  let incoming = 0;
-  let outgoing = 0;
-  for (const message of messages ?? []) {
-    const at = new Date(message.created_at).getTime();
-    if (message.direction === "incoming") {
-      incoming += 1;
-      if (!firstIncoming.has(message.conversation_id)) firstIncoming.set(message.conversation_id, at);
-    } else {
-      outgoing += 1;
-      const start = firstIncoming.get(message.conversation_id);
-      if (start !== undefined && !firstReply.has(message.conversation_id) && at >= start) firstReply.set(message.conversation_id, at - start);
-    }
-  }
-  return {
-    created: rows.length,
-    closed: rows.filter((r) => r.status === "closed").length,
-    openNow: openNow ?? 0,
-    pendingNow: pendingNow ?? 0,
-    incoming,
-    outgoing,
-    firstResponse: median([...firstReply.values()]),
-    answered: firstReply.size,
-    byAgent: top(byAgent),
-    byTeam: top(byTeam),
-  };
-}
-
-const PROPOSAL_OR_LATER = new Set(["proposta", "taxa_paga", "matriculado"]);
-const PAID_OR_LATER = new Set(["taxa_paga", "matriculado"]);
-
-async function crmReport(organizationId: string, from: Date) {
-  const supabase = await createClient();
-  const since = from.toISOString();
-  const [{ data: leads }, { data: paid }, { data: courses }] = await Promise.all([
-    supabase.from("leads").select("stage, source, course_id").eq("organization_id", organizationId).gte("created_at", since).limit(10000),
-    supabase.from("enrollment_charges").select("amount_cents").eq("organization_id", organizationId).eq("status", "paid").gte("paid_at", since).limit(10000),
-    supabase.from("courses").select("id, name").eq("organization_id", organizationId),
-  ]);
-  const rows = leads ?? [];
-  const courseNames = new Map((courses ?? []).map((c) => [c.id as string, c.name as string]));
-  const byStage = new Map<string, number>();
-  const byCourse = new Map<string, number>();
-  const bySource = new Map<string, number>();
-  for (const lead of rows) {
-    const stage = STAGES.find((s) => s.key === lead.stage)?.label ?? lead.stage;
-    byStage.set(stage, (byStage.get(stage) ?? 0) + 1);
-    const course = lead.course_id ? (courseNames.get(lead.course_id) ?? "Curso removido") : "Curso não informado";
-    byCourse.set(course, (byCourse.get(course) ?? 0) + 1);
-    const source = lead.source === "whatsapp" ? "WhatsApp" : "Cadastro manual";
-    bySource.set(source, (bySource.get(source) ?? 0) + 1);
-  }
-  const proposals = rows.filter((l) => PROPOSAL_OR_LATER.has(l.stage)).length;
-  const paidLeads = rows.filter((l) => PAID_OR_LATER.has(l.stage)).length;
-  const enrolled = rows.filter((l) => l.stage === "matriculado").length;
-  const pct = (part: number) => (rows.length ? `${Math.round((part / rows.length) * 100)}%` : "—");
-  return {
-    total: rows.length,
-    proposals,
-    paidLeads,
-    enrolled,
-    lost: rows.filter((l) => l.stage === "perdido").length,
-    pct,
-    feesCents: (paid ?? []).reduce((sum, c) => sum + (c.amount_cents as number), 0),
-    feesCount: (paid ?? []).length,
-    byStage: STAGES.map((s) => [s.label, byStage.get(s.label) ?? 0] as [string, number]).filter(([, n]) => n > 0),
-    byCourse: top(byCourse),
-    bySource: top(bySource),
-  };
-}
-
-async function analysisReport(from: Date, scope: Prisma.CurricularAnalysisWhereInput) {
-  const where: Prisma.CurricularAnalysisWhereInput = { ...scope, createdAt: { gte: from } };
-  const [total, completed, enrolled, notEnrolled, byCourse, byUnit] = await Promise.all([
-    prisma.curricularAnalysis.count({ where }),
-    prisma.curricularAnalysis.count({ where: { ...where, status: "COMPLETED" } }),
-    prisma.curricularAnalysis.count({ where: { ...where, enrollmentStatus: "ENROLLED" } }),
-    prisma.curricularAnalysis.count({ where: { ...where, enrollmentStatus: "NOT_ENROLLED" } }),
-    prisma.curricularAnalysis.groupBy({ by: ["courseName"], where: { ...where, courseName: { not: null } }, _count: { _all: true } }),
-    prisma.curricularAnalysis.groupBy({ by: ["poloName"], where: { ...where, poloName: { not: null } }, _count: { _all: true } }),
-  ]);
-  const toMap = (rows: { _count: { _all: number } }[], key: (row: never) => string | null) =>
-    new Map(rows.map((row) => [key(row as never) ?? "—", row._count._all]));
-  return {
-    total,
-    completed,
-    enrolled,
-    notEnrolled,
-    conversion: enrolled + notEnrolled ? Math.round((enrolled / (enrolled + notEnrolled)) * 100) : null,
-    byCourse: top(toMap(byCourse, (r: { courseName: string | null }) => r.courseName)),
-    byUnit: top(toMap(byUnit, (r: { poloName: string | null }) => r.poloName)),
-  };
+function AnalysisSection({ analysis, period, teamWide }: { analysis: Analysis; period: ReportPeriod; teamWide: boolean }) {
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">Análise curricular {teamWide ? "· toda a equipe" : "· suas análises"} · {period.label}</h2>
+        <Button asChild size="sm" variant="outline">
+          <a href={`/api/reports/analyses?from=${period.from.toISOString()}&to=${period.to.toISOString()}`}><Download className="size-4" /> Exportar CSV</a>
+        </Button>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Análises no período" value={analysis.total} hint={`${analysis.completed} concluídas`} change={analysis.totalChange} />
+        <StatCard label="Matrículas" value={analysis.enrolled} hint={`${analysis.notEnrolled} não matriculados`} />
+        <StatCard label="Conversão" value={analysis.conversion === null ? "—" : `${analysis.conversion}%`} hint="entre os retornos informados" />
+        <StatCard label="Aguardando retorno" value={Math.max(0, analysis.completed - analysis.enrolled - analysis.notEnrolled)} hint="análises concluídas sem retorno" />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartCard title="Análises por curso"><HorizontalBars rows={analysis.byCourse.map(([label, value]) => ({ label, value }))} label="Análises por curso" /></ChartCard>
+        <ChartCard title="Análises por unidade"><HorizontalBars rows={analysis.byUnit.map(([label, value]) => ({ label, value }))} label="Análises por unidade" color="var(--chart-4)" /></ChartCard>
+      </div>
+    </>
+  );
 }
 
 export default async function ReportsPage({ searchParams }: PageProps<"/relatorios">) {
@@ -208,90 +120,38 @@ export default async function ReportsPage({ searchParams }: PageProps<"/relatori
   if (!context) redirect("/login");
   if (!context.organization) redirect("/onboarding");
   const params = await searchParams;
-  const period = typeof params.periodo === "string" && PERIODS.some(([value]) => value === params.periodo) ? params.periodo : "mes";
-  const from = periodStart(period, new Date());
+  const text = (value: string | string[] | undefined) => (typeof value === "string" ? value : undefined);
+  const now = new Date();
+  const period = resolvePeriod({ periodo: text(params.periodo), de: text(params.de), ate: text(params.ate) }, now);
+  const organizationId = context.organization.organizationId;
   const modules = context.entitlements?.modules ?? [];
   const curricularUser = modules.includes("analise_curricular") ? await getSessionUser() : null;
   const teamWide = curricularUser ? can(curricularUser.role, "academic:all") : false;
   const [crm, attendance, analysis] = await Promise.all([
-    modules.includes("crm") ? crmReport(context.organization.organizationId, from) : Promise.resolve(null),
-    modules.includes("atendimento") ? attendanceReport(context.organization.organizationId, from) : Promise.resolve(null),
-    curricularUser && can(curricularUser.role, "analysis:read") ? analysisReport(from, teamWide ? {} : { createdById: curricularUser.id }) : Promise.resolve(null),
+    modules.includes("crm") ? crmReport(organizationId, period) : Promise.resolve(null),
+    modules.includes("atendimento") ? attendanceReport(organizationId, period) : Promise.resolve(null),
+    curricularUser && can(curricularUser.role, "analysis:read") ? analysisReport(period, teamWide ? {} : { createdById: curricularUser.id }) : Promise.resolve(null),
   ]);
+
+  const tabs: ReportTab[] = [];
+  if (crm) tabs.push({ id: "crm", label: "Funil de matrículas", content: <CrmSection crm={crm} period={period} /> });
+  if (attendance) tabs.push({ id: "atendimento", label: "Atendimento", content: <AttendanceSection attendance={attendance} period={period} /> });
+  if (analysis) tabs.push({ id: "analise", label: "Análise curricular", content: <AnalysisSection analysis={analysis} period={period} teamWide={teamWide} /> });
 
   return (
     <>
       <PageHeader
         eyebrow={context.organization.name}
         title="Relatórios"
-        description="Funil de matrículas, atendimento e análise curricular no mesmo lugar."
-        actions={
-          <form className="flex gap-2">
-            <select name="periodo" defaultValue={period} className="h-9 rounded-md border bg-card px-2 text-sm" aria-label="Período">
-              {PERIODS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-            <Button type="submit" variant="outline" size="sm">Aplicar</Button>
-          </form>
-        }
+        description="Funil de matrículas, atendimento e análise curricular, com a variação sobre o período anterior de mesmo tamanho."
+        actions={<PeriodFilter active={period.key} fromDay={period.fromDay} toDay={period.toDay} today={zonedDayKey(now)} />}
       />
-      {!crm && !attendance && !analysis && (
+      {tabs.length === 0 ? (
         <p className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
           Nenhum módulo com relatórios no seu plano. <Link href="/conta/plano" className="underline">Ver planos</Link>
         </p>
-      )}
-      {crm && (
-        <section className="mb-10 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">Funil de matrículas</h2>
-            <Button asChild size="sm" variant="outline"><Link href="/crm">Abrir CRM</Link></Button>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat label="Leads no período" value={crm.total} hint={`${crm.lost} perdidos`} />
-            <Stat label="Receberam proposta" value={crm.proposals} hint={`${crm.pct(crm.proposals)} dos leads`} />
-            <Stat label="Taxa paga" value={crm.paidLeads} hint={`${crm.pct(crm.paidLeads)} dos leads · ${crm.enrolled} matriculados`} />
-            <Stat label="Taxas recebidas" value={money(crm.feesCents / 100)} hint={`${crm.feesCount} pagamento${crm.feesCount === 1 ? "" : "s"} confirmado${crm.feesCount === 1 ? "" : "s"}`} />
-          </div>
-          <div className="grid gap-4 lg:grid-cols-3">
-            <Ranking title="Leads por etapa atual" rows={crm.byStage} empty="Nenhum lead no período." />
-            <Ranking title="Leads por curso" rows={crm.byCourse} empty="Nenhum lead no período." />
-            <Ranking title="Leads por origem" rows={crm.bySource} empty="Nenhum lead no período." />
-          </div>
-        </section>
-      )}
-      {attendance && (
-        <section className="mb-10 space-y-4">
-          <h2 className="text-lg font-semibold">Atendimento</h2>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat label="Conversas no período" value={attendance.created} hint={`${attendance.closed} encerradas`} />
-            <Stat label="Agora" value={`${attendance.pendingNow} aguardando`} hint={`${attendance.openNow} em atendimento`} />
-            <Stat label="Primeira resposta (mediana)" value={formatDuration(attendance.firstResponse)} hint={`${attendance.answered} conversas respondidas`} />
-            <Stat label="Mensagens" value={attendance.incoming + attendance.outgoing} hint={`${attendance.incoming} recebidas · ${attendance.outgoing} enviadas`} />
-          </div>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Ranking title="Conversas encerradas por atendente" rows={attendance.byAgent} empty="Nenhuma conversa encerrada no período." />
-            <Ranking title="Conversas por departamento" rows={attendance.byTeam} empty="Nenhuma conversa no período." />
-          </div>
-        </section>
-      )}
-      {analysis && (
-        <section className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">Análise curricular {teamWide ? "· toda a equipe" : "· suas análises"}</h2>
-            <Button asChild size="sm" variant="outline">
-              <a href={`/api/reports/analyses?from=${from.toISOString()}`}><Download className="size-4" /> Exportar CSV</a>
-            </Button>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat label="Análises no período" value={analysis.total} hint={`${analysis.completed} concluídas`} />
-            <Stat label="Matrículas" value={analysis.enrolled} hint={`${analysis.notEnrolled} não matriculados`} />
-            <Stat label="Conversão" value={analysis.conversion === null ? "—" : `${analysis.conversion}%`} hint="entre os retornos informados" />
-            <Stat label="Aguardando retorno" value={Math.max(0, analysis.completed - analysis.enrolled - analysis.notEnrolled)} hint="análises concluídas sem retorno" />
-          </div>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Ranking title="Análises por curso" rows={analysis.byCourse} empty="Nenhuma análise no período." />
-            <Ranking title="Análises por unidade" rows={analysis.byUnit} empty="Cadastre as unidades em Análise: geral." />
-          </div>
-        </section>
+      ) : (
+        <ReportTabs tabs={tabs} />
       )}
     </>
   );

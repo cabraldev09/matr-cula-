@@ -147,6 +147,22 @@ export function startOfCurrentMonth(now: Date = new Date()): Date {
   return new Date(naive - zoneOffsetMinutes(new Date(naive)) * 60_000);
 }
 
+/** 00:00 de uma data "AAAA-MM-DD" no fuso da aplicação (ou null se a data não existir). */
+export function startOfZonedDay(isoDate: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match) return null;
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const naive = Date.UTC(year, month - 1, day, 0, 0, 0);
+  const check = new Date(naive);
+  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) return null;
+  return new Date(naive - zoneOffsetMinutes(new Date(naive)) * 60_000);
+}
+
+/** "AAAA-MM-DD" do dia civil de um instante, no fuso da aplicação. */
+export function zonedDayKey(at: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: APP_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(at);
+}
+
 const RELATIVE_UNITS: Array<{ unit: Intl.RelativeTimeFormatUnit; ms: number }> =
   [
     { unit: "year", ms: 365 * 24 * 60 * 60_000 },

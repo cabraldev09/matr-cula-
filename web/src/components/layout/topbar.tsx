@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sidebar } from "@/components/layout/sidebar";
-import type { NavContext } from "@/components/layout/nav-items";
+import { buildCrumbs, type NavContext } from "@/components/layout/nav-items";
+import { CommandPalette } from "@/components/layout/command-palette";
 import { logoutAction, switchOrganizationAction } from "@/features/auth/actions";
 import { FollowUpBell, type FollowUpItem } from "@/components/layout/follow-up-bell";
 import { PushToggle } from "@/components/layout/push-toggle";
@@ -65,8 +66,10 @@ export function Topbar({
         </SheetContent>
       </Sheet>
       <BackButton />
+      <Breadcrumbs />
       <OrganizationSwitcher organizations={organizations} activeOrganizationId={activeOrganizationId} />
       <div className="flex-1" />
+      <CommandPalette nav={nav} organizationId={activeOrganizationId} />
       {followUps && <FollowUpBell items={followUps.items} total={followUps.total} teamWide={followUps.teamWide} />}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -119,10 +122,35 @@ function BackButton() {
     else router.push(parent ? `/${parent}` : "/");
   }
   return (
-    <Button type="button" variant="ghost" size="sm" onClick={goBack} className="gap-1.5 text-slate-600 hover:text-brand-navy" aria-label="Voltar para a página anterior">
+    <Button type="button" variant="ghost" size="sm" onClick={goBack} className="gap-1.5 text-slate-600 hover:text-brand-navy md:hidden" aria-label="Voltar para a página anterior">
       <ArrowLeft className="size-4" />
       <span className="hidden sm:inline">Voltar</span>
     </Button>
+  );
+}
+
+/** Trilha "CRM › Propostas" no desktop. No celular fica o botão de voltar. */
+function Breadcrumbs() {
+  const pathname = usePathname();
+  const crumbs = buildCrumbs(pathname);
+  if (crumbs.length === 0) return null;
+  return (
+    <nav aria-label="Você está em" className="hidden min-w-0 items-center gap-1.5 text-sm md:flex">
+      <Link href="/inicio" className="text-muted-foreground transition-colors hover:text-brand-navy">Início</Link>
+      {crumbs.map((crumb, index) => {
+        const last = index === crumbs.length - 1;
+        return (
+          <span key={`${crumb.label}-${index}`} className="flex min-w-0 items-center gap-1.5">
+            <span aria-hidden="true" className="text-muted-foreground/50">›</span>
+            {crumb.href && !last ? (
+              <Link href={crumb.href} className="truncate text-muted-foreground transition-colors hover:text-brand-navy">{crumb.label}</Link>
+            ) : (
+              <span className={last ? "truncate font-medium text-foreground" : "truncate text-muted-foreground"} aria-current={last ? "page" : undefined}>{crumb.label}</span>
+            )}
+          </span>
+        );
+      })}
+    </nav>
   );
 }
 

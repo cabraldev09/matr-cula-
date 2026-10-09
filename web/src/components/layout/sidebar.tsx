@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ChevronDown, PanelLeftClose, X } from "lucide-react";
 import {
@@ -10,9 +10,9 @@ import {
   StepsIcon, StudentsIcon, TeamsIcon, type IconComponent,
 } from "@/components/icons";
 import { cn } from "@/lib/utils";
-import { can } from "@/lib/rbac";
-import { NAV_SECTIONS, SETTINGS_NAV, type NavContext, type NavIcon, type NavItem, type SettingsNavItem } from "@/components/layout/nav-items";
+import { isNavVisible, NAV_SECTIONS, SETTINGS_NAV, type NavContext, type NavIcon } from "@/components/layout/nav-items";
 import { BrandLogo } from "@/components/shared/brand-logo";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -41,19 +41,14 @@ const ICONS: Record<NavIcon, IconComponent> = {
   courses: CoursesIcon,
 };
 
-function visible(item: NavItem | SettingsNavItem, nav: NavContext): boolean {
-  if (item.module && !nav.modules.includes(item.module)) return false;
-  if (item.managerOnly && !nav.manager) return false;
-  if (item.permission && !can(nav.role, item.permission)) return false;
-  return true;
-}
-
 /** Itens da análise curricular que são prefixos de outros (ex.: /analyses e /analyses/new). */
+const SIDEBAR_KEY = "mp-sidebar-mode";
+
 function isActive(pathname: string, href: string): boolean {
   if (href === "/analyses") return pathname === "/analyses" || /^\/analyses\/(?!new)/.test(pathname);
   if (href === "/academic-analysis") return pathname === href || (pathname.startsWith(`${href}/`) && !/^\/academic-analysis\/(students|requests)/.test(pathname));
-  if (href === "/atendimento") return pathname === href || /^\/atendimento\/conversas/.test(pathname);
-  if (href === "/crm") return pathname === href || /^\/crm\/leads/.test(pathname);
+  // Estas duas páginas têm irmãs sob o mesmo prefixo (contatos, propostas…): só a própria rota marca o item.
+  if (href === "/atendimento" || href === "/crm") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -63,22 +58,41 @@ function isActive(pathname: string, href: string): boolean {
  */
 export function Sidebar({ nav, onNavigate, onClose, variant = "rail" }: { nav: NavContext; onNavigate?: () => void; onClose?: () => void; variant?: "rail" | "drawer" }) {
   const pathname = usePathname();
-  const [railMode, setMode] = useState<"auto" | "expanded" | "collapsed">("auto");
+  const [railMode, setRailMode] = useState<"auto" | "expanded" | "collapsed">("auto");
   const drawer = variant === "drawer";
   const mode = drawer ? "expanded" : railMode;
-  const settingsItems = SETTINGS_NAV.filter((item) => visible(item, nav));
+  const settingsItems = SETTINGS_NAV.filter((item) => isNavVisible(item, nav));
   const inSettings = settingsItems.some((item) => isActive(pathname, item.href));
   const expanded = mode === "expanded";
   const labels = mode === "expanded" ? "inline" : mode === "collapsed" ? "hidden" : "hidden xl:inline";
   const sectionLabels = mode === "expanded" ? "block" : mode === "collapsed" ? "hidden" : "hidden xl:block";
 
+  // O modo escolhido fica salvo no navegador. Lido depois da montagem para não divergir do HTML do servidor.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const saved = window.localStorage.getItem(SIDEBAR_KEY);
+        if (saved === "expanded" || saved === "collapsed") setRailMode(saved);
+      } catch {
+        /* sem armazenamento: segue no automático */
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
   function toggle() {
     const isCurrentlyExpanded = mode === "expanded" || (mode === "auto" && window.matchMedia("(min-width: 1280px)").matches);
-    setMode(isCurrentlyExpanded ? "collapsed" : "expanded");
+    const next = isCurrentlyExpanded ? "collapsed" : "expanded";
+    setRailMode(next);
+    try {
+      window.localStorage.setItem(SIDEBAR_KEY, next);
+    } catch {
+      /* ignorado */
+    }
   }
 
   const sections = NAV_SECTIONS.filter((section) => !section.module || nav.modules.includes(section.module))
-    .map((section) => ({ ...section, items: section.items.filter((item) => visible(item, nav)) }))
+    .map((section) => ({ ...section, items: section.items.filter((item) => isNavVisible(item, nav)) }))
     .filter((section) => section.items.length > 0);
 
   const linkClass = (active: boolean) =>
@@ -118,10 +132,15 @@ export function Sidebar({ nav, onNavigate, onClose, variant = "rail" }: { nav: N
             {section.items.map((item) => {
               const Icon = ICONS[item.icon];
               return (
-                <Link key={item.href} href={item.href} onClick={onNavigate} title={item.label} className={linkClass(isActive(pathname, item.href))}>
-                  <Icon className="size-4 transition-transform duration-200 group-hover/nav:scale-110" />
-                  <span className={labels}>{item.label}</span>
-                </Link>
+                <Tooltip key={item.href}>
+                  <TooltipTrigger asChild>
+                    <Link href={item.href} onClick={onNavigate} aria-label={item.label} className={linkClass(isActive(pathname, item.href))}>
+                      <Icon className="size-4 transition-transform duration-200 group-hover/nav:scale-110" />
+                      <span className={labels}>{item.label}</span>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className={cn(mode === "expanded" && "hidden", mode === "auto" && "xl:hidden")}>{item.label}</TooltipContent>
+                </Tooltip>
               );
             })}
           </div>

@@ -1,4 +1,4 @@
-import type { Permission } from "@/lib/rbac";
+import { can, type Permission } from "@/lib/rbac";
 import type { ModuleCode } from "@/lib/modules";
 
 export type NavIcon =
@@ -110,4 +110,36 @@ export interface NavContext {
   modules: ModuleCode[];
   manager: boolean;
   platformAdmin: boolean;
+}
+
+/** Regra única de visibilidade: usada pelo menu lateral, pela paleta de comandos e pelas migalhas. */
+export function isNavVisible(item: { module?: ModuleCode; managerOnly?: boolean; permission?: Permission }, nav: NavContext): boolean {
+  if (item.module && !nav.modules.includes(item.module)) return false;
+  if (item.managerOnly && !nav.manager) return false;
+  if (item.permission && !can(nav.role, item.permission)) return false;
+  return true;
+}
+
+export interface Crumb {
+  label: string;
+  href?: string;
+}
+
+/** Trilha de navegação a partir do endereço: "CRM › Propostas". Vazia fora das páginas do menu (o início não tem trilha). */
+export function buildCrumbs(pathname: string): Crumb[] {
+  const matches = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const settings = SETTINGS_NAV.filter((item) => matches(item.href)).sort((a, b) => b.href.length - a.href.length)[0];
+  if (settings) return [{ label: "Configurações" }, { label: settings.label, href: settings.href }, ...(pathname === settings.href ? [] : [{ label: "Detalhe" }])];
+  let best: { item: NavItem; section: NavSection } | null = null;
+  for (const section of NAV_SECTIONS) {
+    for (const item of section.items) {
+      if (matches(item.href) && (!best || item.href.length > best.item.href.length)) best = { item, section };
+    }
+  }
+  if (!best || best.item.href === "/inicio") return [];
+  const crumbs: Crumb[] = [];
+  if (best.section.label) crumbs.push({ label: best.section.label });
+  crumbs.push({ label: best.item.label, href: best.item.href });
+  if (pathname !== best.item.href) crumbs.push({ label: "Detalhe" });
+  return crumbs;
 }
