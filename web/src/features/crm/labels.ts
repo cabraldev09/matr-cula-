@@ -71,6 +71,7 @@ export interface Lead {
   created_at: string;
   updated_at: string;
   contacts: { name: string; phone: string | null; email: string | null } | null;
+  proposals?: { number: number; first_monthly_cents: number } | null;
 }
 
 export interface Course {
