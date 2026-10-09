@@ -40,7 +40,9 @@
   --color-brand-navy-900: var(--brand-navy-900);
   --color-brand-cyan-400: var(--brand-cyan-400);
   --color-brand-cyan-50: var(--brand-cyan-50);
+  --color-brand-cyan-700: var(--brand-cyan-700);
   --color-brand-gold-50: var(--brand-gold-50);
+  --color-brand-gold-700: var(--brand-gold-700);
   --color-status-success: var(--status-success);
   --color-status-success-bg: var(--status-success-bg);
   --color-status-warning: var(--status-warning);

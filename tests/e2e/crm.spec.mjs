@@ -67,8 +67,8 @@ test("WhatsApp message becomes a lead, gets a scholarship proposal and pays the 
     // Taxa por Pix e confirmação manual.
     await sheet.getByRole("button", { name: "Gerar Pix" }).click();
     await expect(sheet.getByText(/^00020126/)).toBeVisible();
-    page.once("dialog", (dialog) => dialog.accept());
     await sheet.getByRole("button", { name: "Marcar como pago" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Sim, já entrou" }).click();
     await expect(page.getByText(/Pagamento confirmado/)).toBeVisible();
     await expect.poll(async () => (await admin.from("leads").select("stage").eq("organization_id", organizationId).single()).data.stage).toBe("taxa_paga");
 
