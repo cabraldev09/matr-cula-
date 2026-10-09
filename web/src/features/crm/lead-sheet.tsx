@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChatIcon, StepsIcon, TemperatureIcon, TranscriptIcon } from "@/components/icons";
+import { ChatIcon, ProposalIcon, StepsIcon, TemperatureIcon, TranscriptIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -11,7 +11,7 @@ import { STAGES, TEMPERATURE, type Course, type Lead, type Stage } from "@/featu
 import { Qualification } from "@/features/crm/lead-qualification";
 import { nextStep } from "@/features/crm/lead-summary";
 import { Timeline } from "@/features/crm/lead-timeline";
-import { ProposalTab } from "@/features/crm/lead-proposals";
+import { PaymentsPanel, ProposalsPanel } from "@/features/crm/lead-proposals";
 import type { Member } from "@/features/crm/lead-types";
 import { cn, formatDateTime } from "@/lib/utils";
 import { formatWhatsapp } from "@/lib/whatsapp";
@@ -76,6 +76,7 @@ function LeadDetail({ lead, onChanged, onMove, organizationId, userId, members, 
           <span className="flex items-center gap-1 text-xs text-white/80"><span className="size-2 rounded-full" style={{ backgroundColor: stage.color }} /> desde {formatDateTime(lead.stage_changed_at)}</span>
           <div className="flex-1" />
           <Button asChild size="sm" variant="secondary"><Link href={`/atendimento?contato=${lead.contact_id}`}><ChatIcon className="size-4" /> Conversa</Link></Button>
+          <Button asChild size="sm" variant="secondary"><Link href={`/crm/leads/${lead.id}/proposta`}><ProposalIcon className="size-4" /> Proposta</Link></Button>
           <Button asChild size="sm" variant="secondary"><Link href="/analyses/new"><TranscriptIcon className="size-4" /> Analisar histórico</Link></Button>
         </div>
       </SheetHeader>
@@ -89,17 +90,23 @@ function LeadDetail({ lead, onChanged, onMove, organizationId, userId, members, 
         </div>
       </div>
 
-      <Tabs defaultValue={lead.stage === "novo" || lead.stage === "contato" ? "qualificacao" : "proposta"} className="p-5">
+      <Tabs defaultValue={lead.stage === "novo" || lead.stage === "contato" ? "inscricao" : lead.stage === "taxa_paga" || lead.stage === "matriculado" ? "pagamentos" : "proposta"} className="p-5">
         <TabsList className="w-full">
-          <TabsTrigger value="qualificacao">Qualificação</TabsTrigger>
-          <TabsTrigger value="proposta">Proposta e taxa</TabsTrigger>
+          <TabsTrigger value="inscricao">Inscrição</TabsTrigger>
+          <TabsTrigger value="proposta">Proposta de bolsa</TabsTrigger>
+          <TabsTrigger value="pagamentos">Matrículas e pagamentos</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
-        <TabsContent value="qualificacao" className="pt-4">
+        <TabsContent value="inscricao" className="pt-4">
+          <p className="mb-4 text-sm text-muted-foreground">Cadastre a inscrição e avance com os dados acadêmicos do candidato.</p>
           <Qualification lead={lead} courses={courses} members={members} organizationId={organizationId} onSaved={onChanged} defaultStartTerm={defaultStartTerm} />
         </TabsContent>
         <TabsContent value="proposta" className="pt-4">
-          <ProposalTab lead={lead} courses={courses} organizationId={organizationId} enrollmentFeeCents={enrollmentFeeCents} efiConfigured={efiConfigured} pixConfigured={pixConfigured} defaultStartTerm={defaultStartTerm} onChanged={onChanged} />
+          <ProposalsPanel lead={lead} organizationId={organizationId} onChanged={onChanged} />
+        </TabsContent>
+        <TabsContent value="pagamentos" className="pt-4">
+          <p className="mb-4 text-sm text-muted-foreground">Gerencie a matrícula, as cobranças, os pagamentos e os comprovantes.</p>
+          <PaymentsPanel lead={lead} organizationId={organizationId} enrollmentFeeCents={enrollmentFeeCents} efiConfigured={efiConfigured} pixConfigured={pixConfigured} onChanged={onChanged} />
         </TabsContent>
         <TabsContent value="historico" className="pt-4">
           <Timeline lead={lead} organizationId={organizationId} userId={userId} members={members} />

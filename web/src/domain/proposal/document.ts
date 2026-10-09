@@ -29,6 +29,15 @@ export function parseProposalRules(value: unknown): ProposalRules {
 
 export type LogoSource = "upload" | "preset_cruzeiro" | "none";
 
+export const DEFAULT_PUNCTUALITY_NOTE = "Observação: o desconto de pontualidade já está considerado nos valores com bolsa. O benefício é fixo e não acumulativo.";
+
+/** Valores da 2ª mensalidade em diante digitados à mão (em reais), no lugar dos calculados pelas regras. */
+export interface TierOverrides {
+  untilDue?: number;
+  lateTier1?: number;
+  lateTier2?: number;
+}
+
 export interface ProposalDocument {
   number: number | null;
   institutionName: string;
@@ -44,6 +53,13 @@ export interface ProposalDocument {
   pricing: ProposalPricing;
   projectionNote: string;
   finalMessage: string;
+  /** Campos opcionais: propostas antigas não têm e continuam abrindo igual. */
+  punctualityNote?: string;
+  /** Mostra só os semestres de `from` a `to` na projeção (a proposta calcula todos). */
+  projectionRange?: { from: number; to: number } | null;
+  /** Data (AAAA-MM-DD) do vencimento da primeira mensalidade. */
+  firstPaymentDate?: string | null;
+  tierOverrides?: TierOverrides;
 }
 
 export function buildProposalDocument(input: {
@@ -62,7 +78,17 @@ export function buildProposalDocument(input: {
   projectionNote: string;
   finalMessage: string;
   generatedAt?: Date;
+  punctualityNote?: string;
+  projectionRange?: { from: number; to: number } | null;
+  firstPaymentDate?: string | null;
+  tierOverrides?: TierOverrides;
 }): ProposalDocument {
+  const pricing = priceProposal(
+    { grossMonthlyCents: input.grossMonthlyCents, firstMonthlyCents: input.firstMonthlyCents, semesters: input.semesters, startTerm: input.startTerm },
+    input.rules,
+  );
+  const overrides = input.tierOverrides ?? {};
+  const manual = (value: number | undefined, fallback: number) => (value !== undefined && Number.isFinite(value) && value >= 0 ? Math.round(value * 100) / 100 : fallback);
   return {
     number: input.number ?? null,
     institutionName: input.institutionName,
@@ -75,13 +101,26 @@ export function buildProposalDocument(input: {
     generatedAt: (input.generatedAt ?? new Date()).toISOString(),
     startTerm: input.startTerm,
     rules: input.rules,
-    pricing: priceProposal(
-      { grossMonthlyCents: input.grossMonthlyCents, firstMonthlyCents: input.firstMonthlyCents, semesters: input.semesters, startTerm: input.startTerm },
-      input.rules,
-    ),
+    pricing: { ...pricing, untilDue: manual(overrides.untilDue, pricing.untilDue), lateTier1: manual(overrides.lateTier1, pricing.lateTier1), lateTier2: manual(overrides.lateTier2, pricing.lateTier2) },
     projectionNote: input.projectionNote,
     finalMessage: input.finalMessage,
+    ...(input.punctualityNote?.trim() ? { punctualityNote: input.punctualityNote.trim() } : {}),
+    ...(input.projectionRange ? { projectionRange: input.projectionRange } : {}),
+    ...(input.firstPaymentDate ? { firstPaymentDate: input.firstPaymentDate } : {}),
+    ...(Object.keys(overrides).length ? { tierOverrides: overrides } : {}),
   };
+}
+
+/** Linhas da projeção que a proposta mostra: todas, ou só o intervalo escolhido. */
+export function visibleProjection(doc: Pick<ProposalDocument, "pricing" | "projectionRange">) {
+  const range = doc.projectionRange;
+  return range ? doc.pricing.projection.filter((row) => row.index >= range.from && row.index <= range.to) : doc.pricing.projection;
+}
+
+/** "2026-10-12" → "12/10/2026". */
+export function formatIsoDay(value: string | null | undefined): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? "");
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : null;
 }
 
 export const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

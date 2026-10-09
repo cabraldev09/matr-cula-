@@ -8,7 +8,7 @@ import { getSessionContext, requireOrganizationManager, UnauthorizedError, Modul
 import { appUrl } from "@/lib/app-url";
 import { logger } from "@/lib/logger";
 import { fail, ok, toActionError, type ActionResult } from "@/lib/action-result";
-import { buildProposalDocument, money } from "@/domain/proposal/document";
+import { buildProposalDocument, money, proposalRulesSchema } from "@/domain/proposal/document";
 import { loadProposalSettings } from "@/features/proposals/settings";
 import { buildPixPayload } from "@/services/payments/pix";
 import { createEfiPaymentLink, EfiRequestError, testEfiCredentials } from "@/services/billing/efi";
@@ -35,6 +35,24 @@ const proposalSchema = z.object({
   grossMonthlyCents: centsSchema,
   firstMonthlyCents: centsSchema,
   startTerm: termSchema,
+  /** Ajustes feitos na tela da proposta. Sem eles valem as regras salvas pelo polo. */
+  overrides: z
+    .object({
+      rules: proposalRulesSchema.optional(),
+      finalMessage: z.string().trim().max(600).optional(),
+      projectionNote: z.string().trim().max(600).optional(),
+      punctualityNote: z.string().trim().max(400).optional(),
+      projectionRange: z
+        .object({ from: z.coerce.number().int().min(1).max(20), to: z.coerce.number().int().min(1).max(20) })
+        .refine((range) => range.from <= range.to, "O primeiro semestre da projeção não pode vir depois do último.")
+        .nullable()
+        .optional(),
+      firstPaymentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data da primeira mensalidade inválida.").nullable().optional(),
+      tierOverrides: z
+        .object({ untilDue: z.number().min(0).max(1_000_000).optional(), lateTier1: z.number().min(0).max(1_000_000).optional(), lateTier2: z.number().min(0).max(1_000_000).optional() })
+        .optional(),
+    })
+    .optional(),
 });
 
 export async function createProposalAction(input: unknown): Promise<ActionResult<{ id: string; token: string; url: string }>> {
@@ -47,6 +65,9 @@ export async function createProposalAction(input: unknown): Promise<ActionResult
     const supabase = await createClient();
     const organizationId = context.organization.organizationId;
     const settings = await loadProposalSettings(supabase, organizationId, context.organization.name);
+    const o = p.overrides ?? {};
+    if (o.projectionRange && o.projectionRange.to > p.semesters) return fail("O último semestre da projeção passa da duração do curso.");
+    const rules = o.rules ?? settings.rules;
     const document = buildProposalDocument({
       institutionName: settings.institutionName,
       institutionDocument: settings.institutionDocument,
@@ -58,9 +79,13 @@ export async function createProposalAction(input: unknown): Promise<ActionResult
       grossMonthlyCents: p.grossMonthlyCents,
       firstMonthlyCents: p.firstMonthlyCents,
       startTerm: p.startTerm,
-      rules: settings.rules,
-      projectionNote: settings.projectionNote,
-      finalMessage: settings.finalMessage,
+      rules,
+      projectionNote: o.projectionNote ?? settings.projectionNote,
+      finalMessage: o.finalMessage ?? settings.finalMessage,
+      punctualityNote: o.punctualityNote,
+      projectionRange: o.projectionRange ?? null,
+      firstPaymentDate: o.firstPaymentDate ?? null,
+      tierOverrides: o.tierOverrides,
     });
     const { data, error } = await supabase
       .from("proposals")
@@ -73,7 +98,7 @@ export async function createProposalAction(input: unknown): Promise<ActionResult
         semesters: p.semesters,
         gross_monthly_cents: p.grossMonthlyCents,
         first_monthly_cents: p.firstMonthlyCents,
-        enrollment_fee_cents: settings.rules.enrollmentFeeCents,
+        enrollment_fee_cents: rules.enrollmentFeeCents,
         start_term: p.startTerm,
         snapshot: document,
         created_by: context.authUserId,

@@ -1,6 +1,6 @@
 import "server-only";
 import { Document, Image, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
-import { money, percent, percent2, type ProposalDocument } from "@/domain/proposal/document";
+import { DEFAULT_PUNCTUALITY_NOTE, formatIsoDay, money, percent, percent2, visibleProjection, type ProposalDocument } from "@/domain/proposal/document";
 import { formatDateTime } from "@/lib/time";
 
 const BLUE = "#1d63c9";
@@ -56,6 +56,7 @@ const COLUMNS = [
 
 function ProposalPdf({ doc, logo }: { doc: ProposalDocument; logo: Buffer | null }) {
   const { pricing, rules } = doc;
+  const firstDue = formatIsoDay(doc.firstPaymentDate);
   const annualLabels = { min: `${rules.annualMinPct}%`, max: `${rules.annualMaxPct}%` };
   const columns = COLUMNS.map((c) => ({
     ...c,
@@ -86,7 +87,10 @@ function ProposalPdf({ doc, logo }: { doc: ProposalDocument; logo: Buffer | null
             <Text style={s.bold}>Bolsa aplicada:</Text> {percent2(pricing.scholarshipPct)}{" "}
             <Text style={s.note}>(Descontos de pontualidade, desconto de ingressante, campanha comercial etc.)</Text>
           </Text>
-          <Text style={[s.line, { marginBottom: 6 }]}><Text style={s.bold}>Primeira Mensalidade:</Text> {money(pricing.firstMonthly)}</Text>
+          <Text style={[s.line, { marginBottom: 6 }]}>
+            <Text style={s.bold}>Primeira Mensalidade:</Text> {money(pricing.firstMonthly)}
+            {firstDue ? <Text style={s.note}> (vencimento em {firstDue})</Text> : null}
+          </Text>
           <Text style={s.line}>
             <Text style={s.bold}>Taxa de matrícula:</Text> {money(pricing.enrollmentFee)} <Text style={s.note}>(no ato da inscrição)</Text>
           </Text>
@@ -107,9 +111,7 @@ function ProposalPdf({ doc, logo }: { doc: ProposalDocument; logo: Buffer | null
             </Text>
           </View>
         ))}
-        <Text style={s.observation}>
-          Observação: o desconto de pontualidade já está considerado nos valores com bolsa. O benefício é fixo e não acumulativo.
-        </Text>
+        <Text style={s.observation}>{doc.punctualityNote ?? DEFAULT_PUNCTUALITY_NOTE}</Text>
 
         <Text style={s.h3}>Projeção por semestre</Text>
         <Text style={s.planning}>{doc.projectionNote}</Text>
@@ -119,7 +121,7 @@ function ProposalPdf({ doc, logo }: { doc: ProposalDocument; logo: Buffer | null
               <Text key={c.key} style={[s.th, { width: c.width, textAlign: c.align ?? "right" }]}>{c.label}</Text>
             ))}
           </View>
-          {pricing.projection.map((r) => {
+          {visibleProjection(doc).map((r) => {
             const values: Record<string, string> = {
               sem: String(r.index),
               term: r.term,

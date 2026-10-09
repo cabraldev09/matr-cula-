@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import { activatePlan } from "../helpers/plans.mjs";
 const require = createRequire(new URL("../../frontend/package.json", import.meta.url));
 const { createClient } = require("@supabase/supabase-js");
@@ -34,8 +35,8 @@ test("WhatsApp message becomes a lead, gets a scholarship proposal and pays the 
 
     // Tabela de cursos do polo.
     await page.goto("/crm/cursos");
-    await page.getByRole("button", { name: "Importar planilha" }).click();
-    await page.getByRole("dialog").getByRole("textbox").last().fill("Biomedicina;Semipresencial - Graduação;8;1014,70;306,75\nNutrição;Semipresencial - Graduação;8;1073,80;284,93");
+    // Planilha .xlsx pela área de envio: a prévia mostra o que entra antes de gravar.
+    await page.getByLabel("Arquivo da planilha de cursos").setInputFiles(fileURLToPath(new URL("../fixtures/cursos.xlsx", import.meta.url)));
     await expect(page.getByText("2 linha(s) prontas")).toBeVisible();
     await page.getByRole("button", { name: /^Importar 2$/ }).click();
     await expect(page.getByText("69,77%")).toBeVisible();
@@ -55,17 +56,22 @@ test("WhatsApp message becomes a lead, gets a scholarship proposal and pays the 
     await expect(card).toContainText("Biomedicina");
     await expect(page.getByRole("region", { name: "Novo lead" })).toContainText("Maira E2E");
 
-    // Proposta com os valores do modelo.
+    // Tela própria da proposta, com os valores do modelo da Biomedicina.
     await card.click();
-    await page.getByRole("tab", { name: "Proposta e taxa" }).click();
-    const sheet = page.getByRole("dialog");
-    await expect(sheet).toContainText("69,77%");
-    await expect(sheet).toContainText("R$ 352,76");
-    await sheet.getByRole("button", { name: "Gerar proposta" }).click();
+    await page.getByRole("dialog").getByRole("link", { name: "Proposta", exact: true }).click();
+    await expect(page).toHaveURL(/\/crm\/leads\/[0-9a-f-]+\/proposta/);
+    await expect(page.getByText("69,77%").first()).toBeVisible();
+    await expect(page.locator("#tier-untilDue")).toHaveValue("306,75");
+    await expect(page.locator("#tier-lateTier1")).toHaveValue("352,76");
+    await expect(page.locator("#tier-lateTier2")).toHaveValue("383,44");
+    await page.getByRole("button", { name: "Salvar proposta" }).click();
     await expect(page.getByText("Proposta nº 1 criada.")).toBeVisible();
     const { data: proposal } = await admin.from("proposals").select("public_token").eq("organization_id", organizationId).single();
 
-    // Taxa por Pix e confirmação manual.
+    // Volta para o lead e cobra a taxa por Pix, com confirmação manual.
+    await page.getByRole("link", { name: "Cancelar" }).click();
+    const sheet = page.getByRole("dialog");
+    await sheet.getByRole("tab", { name: "Matrículas e pagamentos" }).click();
     await sheet.getByRole("button", { name: "Gerar Pix" }).click();
     await expect(sheet.getByText(/^00020126/)).toBeVisible();
     await sheet.getByRole("button", { name: "Marcar como pago" }).click();

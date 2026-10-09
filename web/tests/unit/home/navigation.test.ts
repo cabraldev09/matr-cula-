@@ -12,6 +12,7 @@ describe("navegação", () => {
     expect(buildCrumbs("/crm/propostas")).toEqual([{ label: "CRM" }, { label: "Propostas", href: "/crm/propostas" }]);
     expect(buildCrumbs("/atendimento/contatos")).toEqual([{ label: "Atendimento" }, { label: "Contatos", href: "/atendimento/contatos" }]);
     expect(buildCrumbs("/analyses/123")).toEqual([{ label: "Análise curricular" }, { label: "Análises", href: "/analyses" }, { label: "Detalhe" }]);
+    expect(buildCrumbs("/crm/leads/abc/proposta")).toEqual([{ label: "CRM" }, { label: "Funil de matrículas", href: "/crm" }, { label: "Proposta de bolsa" }]);
     expect(buildCrumbs("/conta/plano")).toEqual([{ label: "Configurações" }, { label: "Plano e faturas", href: "/conta/plano" }]);
     expect(buildCrumbs("/pagina-que-nao-existe")).toEqual([]);
   });

@@ -140,6 +140,6 @@ export function buildCrumbs(pathname: string): Crumb[] {
   const crumbs: Crumb[] = [];
   if (best.section.label) crumbs.push({ label: best.section.label });
   crumbs.push({ label: best.item.label, href: best.item.href });
-  if (pathname !== best.item.href) crumbs.push({ label: "Detalhe" });
+  if (pathname !== best.item.href) crumbs.push({ label: pathname.endsWith("/proposta") ? "Proposta de bolsa" : "Detalhe" });
   return crumbs;
 }

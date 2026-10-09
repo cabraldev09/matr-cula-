@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileUp, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { FileSpreadsheet, FileUp, Loader2, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { CoursesIcon } from "@/components/icons";
@@ -18,10 +18,21 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { money, percent2 } from "@/domain/proposal/document";
 import { readableError, requireResult } from "@/features/attendance/errors";
 import { courseKey, IMPORT_FORMAT, IMPORT_TEMPLATE, parseCourseImport, parseMoney } from "@/features/crm/course-import";
+import { readCourseFile } from "@/features/crm/course-sheet-file";
 import { MODALITIES, type Course } from "@/features/crm/labels";
+
+function downloadTemplate() {
+  const url = URL.createObjectURL(new Blob([IMPORT_TEMPLATE], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "modelo-cursos.csv";
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 const normalize = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
@@ -32,12 +43,26 @@ export function CoursesManager({ organizationId, courses }: { organizationId: st
   const [query, setQuery] = useState("");
   const [modality, setModality] = useState("");
   const [removing, setRemoving] = useState<Course | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importNotes, setImportNotes] = useState<string[]>([]);
+  const [dragging, setDragging] = useState(false);
 
   const modalities = useMemo(() => [...new Set(courses.map((c) => c.modality))].sort(), [courses]);
   const visible = useMemo(() => {
     const needle = normalize(query.trim());
     return courses.filter((c) => (!modality || c.modality === modality) && (!needle || normalize(`${c.name} ${c.modality}`).includes(needle)));
   }, [courses, query, modality]);
+
+  /** Lê a planilha escolhida ou arrastada e abre a prévia para conferir antes de gravar. */
+  async function loadFile(file: File | undefined) {
+    if (!file) return;
+    const { text, notes } = await readCourseFile(file);
+    setImportText(text);
+    setImportNotes(notes);
+    setImportOpen(true);
+    if (!text && notes.length) toast.error(notes[0]!);
+  }
 
   async function remove(course: Course) {
     setRemoving(null);
@@ -83,9 +108,28 @@ export function CoursesManager({ organizationId, courses }: { organizationId: st
 
   return (
     <div className="space-y-4">
+      <section
+        aria-label="Subir planilha de cursos"
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => { e.preventDefault(); setDragging(false); loadFile(e.dataTransfer.files[0]); }}
+        className={cn("flex flex-wrap items-center gap-4 rounded-2xl border-2 border-dashed bg-card p-5 transition-colors", dragging ? "border-brand-cyan bg-brand-cyan-50" : "border-border")}
+      >
+        <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-brand-navy-50 text-brand-navy"><FileSpreadsheet className="size-6" /></span>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">Subir os cursos por planilha</p>
+          <p className="text-sm text-muted-foreground">Arraste o arquivo para cá ou escolha. Aceita <strong>.xlsx</strong> e <strong>.csv</strong>, com as colunas curso, modalidade, semestres, mensalidade e primeira mensalidade (ou bolsa em %). Você confere tudo antes de gravar.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="default">
+            <label className="cursor-pointer"><Upload className="size-4" /> Escolher planilha<input type="file" accept=".xlsx,.csv,.txt,.xls" className="sr-only" aria-label="Arquivo da planilha de cursos" onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; loadFile(file); }} /></label>
+          </Button>
+          <Button type="button" variant="ghost" onClick={downloadTemplate}>Baixar modelo</Button>
+        </div>
+      </section>
       <div className="flex flex-wrap items-center gap-2">
         <CourseDialog organizationId={organizationId} />
-        <ImportDialog busy={busy} existing={new Set(courses.map((c) => courseKey(c.name, c.modality)))} onImport={importRows} />
+        <ImportDialog open={importOpen} onOpenChange={setImportOpen} text={importText} onTextChange={setImportText} notes={importNotes} onFile={loadFile} busy={busy} existing={new Set(courses.map((c) => courseKey(c.name, c.modality)))} onImport={importRows} />
         <div className="relative ml-auto min-w-52 sm:max-w-xs sm:flex-1">
           <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar curso" className="pl-8" aria-label="Buscar curso" />
@@ -225,26 +269,25 @@ function CourseDialog({ organizationId, course }: { organizationId: string; cour
   );
 }
 
-function ImportDialog({ busy, existing, onImport }: { busy: boolean; existing: ReadonlySet<string>; onImport: (text: string) => Promise<boolean> }) {
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState("");
+function ImportDialog({ open, onOpenChange, text, onTextChange, notes, onFile, busy, existing, onImport }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  text: string;
+  onTextChange: (text: string) => void;
+  notes: string[];
+  onFile: (file: File | undefined) => void;
+  busy: boolean;
+  existing: ReadonlySet<string>;
+  onImport: (text: string) => Promise<boolean>;
+}) {
   const rows = useMemo(() => parseCourseImport(text, existing), [text, existing]);
   const valid = rows.filter((r) => r.status !== "erro");
   const invalid = rows.length - valid.length;
 
-  function downloadTemplate() {
-    const url = URL.createObjectURL(new Blob([IMPORT_TEMPLATE], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "modelo-cursos.csv";
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline"><FileUp className="size-4" /> Importar planilha</Button>
+        <Button variant="outline"><FileUp className="size-4" /> Colar linhas</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
@@ -254,8 +297,13 @@ function ImportDialog({ busy, existing, onImport }: { busy: boolean; existing: R
             <button type="button" onClick={downloadTemplate} className="font-medium text-brand-cyan-700 underline underline-offset-2">Baixar modelo</button>
           </DialogDescription>
         </DialogHeader>
-        <Input type="file" accept=".csv,.txt" aria-label="Arquivo CSV" onChange={async (e) => { const file = e.target.files?.[0]; if (file) setText(await file.text()); }} />
-        <Textarea rows={6} value={text} onChange={(e) => setText(e.target.value)} aria-label="Linhas da planilha" placeholder={"Biomedicina;Semipresencial - Graduação;8;1014,70;306,75\nNutrição;Semipresencial - Graduação;8;1073,80;284,93"} className="font-mono text-xs" />
+        <Input type="file" accept=".xlsx,.csv,.txt,.xls" aria-label="Arquivo CSV ou planilha" onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; onFile(file); }} />
+        {notes.length > 0 && (
+          <ul className="space-y-1 rounded-lg border border-status-warning/40 bg-status-warning-bg px-3 py-2 text-xs text-status-warning" aria-label="Avisos sobre a leitura da planilha">
+            {notes.map((note) => <li key={note}>{note}</li>)}
+          </ul>
+        )}
+        <Textarea rows={6} value={text} onChange={(e) => onTextChange(e.target.value)} aria-label="Linhas da planilha" placeholder={"Biomedicina;Semipresencial - Graduação;8;1014,70;306,75\nNutrição;Semipresencial - Graduação;8;1073,80;284,93"} className="font-mono text-xs" />
         {rows.length > 0 && (
           <div className="max-h-60 overflow-auto rounded-lg border">
             <Table>
@@ -282,7 +330,7 @@ function ImportDialog({ busy, existing, onImport }: { busy: boolean; existing: R
           <p className="text-sm text-muted-foreground" aria-live="polite">
             {rows.length === 0 ? "Nenhuma linha ainda." : `${valid.length} linha(s) prontas${invalid ? `, ${invalid} com problema (não entram)` : ""}.`}
           </p>
-          <Button disabled={busy || valid.length === 0} onClick={async () => { if (await onImport(text)) { setOpen(false); setText(""); } }}>
+          <Button disabled={busy || valid.length === 0} onClick={async () => { if (await onImport(text)) { onOpenChange(false); onTextChange(""); } }}>
             {busy && <Loader2 className="size-4 animate-spin" />} Importar {valid.length > 0 ? valid.length : ""}
           </Button>
         </div>

@@ -1,10 +1,12 @@
-import { money, percent, percent2, type ProposalDocument } from "@/domain/proposal/document";
+import { DEFAULT_PUNCTUALITY_NOTE, formatIsoDay, money, percent2, type ProposalDocument } from "@/domain/proposal/document";
 import { formatDateTime } from "@/lib/time";
 import { proposalLogoUrl } from "@/features/proposals/settings";
+import { ProjectionTable } from "@/features/proposals/projection-table";
 
 /** A proposta em HTML (página pública e prévia), no mesmo layout do PDF. */
 export function ProposalView({ doc }: { doc: ProposalDocument }) {
   const { pricing, rules } = doc;
+  const firstDue = formatIsoDay(doc.firstPaymentDate);
   const logo = proposalLogoUrl(doc.logo);
   return (
     <article className="mx-auto w-full max-w-4xl rounded-2xl bg-white p-5 text-[#1f2328] shadow-sm ring-1 ring-slate-200 sm:p-8">
@@ -24,7 +26,7 @@ export function ProposalView({ doc }: { doc: ProposalDocument }) {
       <dl className="mt-5 space-y-1 text-[15px]">
         <div><dt className="inline font-bold">Mensalidade bruta atual:</dt> <dd className="inline">{money(pricing.grossMonthly)}</dd></div>
         <div><dt className="inline font-bold">Bolsa aplicada:</dt> <dd className="inline">{percent2(pricing.scholarshipPct)} <span className="text-xs text-slate-500">(Descontos de pontualidade, desconto de ingressante, campanha comercial etc.)</span></dd></div>
-        <div className="pb-2"><dt className="inline font-bold">Primeira Mensalidade:</dt> <dd className="inline">{money(pricing.firstMonthly)}</dd></div>
+        <div className="pb-2"><dt className="inline font-bold">Primeira Mensalidade:</dt> <dd className="inline">{money(pricing.firstMonthly)}{firstDue && <span className="text-xs text-slate-500"> (vencimento em {firstDue})</span>}</dd></div>
         <div><dt className="inline font-bold">Taxa de matrícula:</dt> <dd className="inline">{money(pricing.enrollmentFee)} <span className="text-xs text-slate-500">(no ato da inscrição)</span></dd></div>
         <div><dt className="inline font-bold">Demais mensalidades:</dt> <dd className="inline">todo dia {rules.dueDay}</dd></div>
         <div><dt className="inline font-bold">Quantidade de parcelas desse semestre:</dt> <dd className="inline">{rules.firstTermInstallments}</dd></div>
@@ -36,48 +38,11 @@ export function ProposalView({ doc }: { doc: ProposalDocument }) {
         <li className="flex gap-2"><span className="mt-2 size-1.5 shrink-0 rounded-full bg-sky-500" /><span><strong>Dias {rules.dueDay + 1} a 25:</strong> {money(pricing.lateTier1)} <span className="text-xs text-slate-500">(Perde desconto de pontualidade de {rules.lateTier1Pct}%.)</span></span></li>
         <li className="flex gap-2"><span className="mt-2 size-1.5 shrink-0 rounded-full bg-sky-500" /><span><strong>Após o vencimento:</strong> {money(pricing.lateTier2)} <span className="text-xs text-slate-500">(Perde desconto de pontualidade de {rules.lateTier2Pct}%.)</span></span></li>
       </ul>
-      <p className="mt-3 text-base italic">Observação: o desconto de pontualidade já está considerado nos valores com bolsa. O benefício é fixo e não acumulativo.</p>
+      <p className="mt-3 text-base italic">{doc.punctualityNote ?? DEFAULT_PUNCTUALITY_NOTE}</p>
 
       <h2 className="mt-6 text-lg font-bold">Projeção por semestre</h2>
       <p className="mt-1 rounded-xl bg-sky-50 px-3 py-1.5 text-xs text-slate-700">{doc.projectionNote}</p>
-      <div className="mt-2 overflow-x-auto rounded-md ring-1 ring-slate-200">
-        <table className="w-full min-w-[760px] text-right text-[13px]">
-          <thead className="bg-slate-50 text-[12px] font-semibold text-[#1d63c9]">
-            <tr>
-              <th className="px-2 py-1.5 text-left">Sem.</th>
-              <th className="px-2 py-1.5 text-left">Período</th>
-              <th className="px-2 py-1.5">Bolsa</th>
-              <th className="px-2 py-1.5">Ajuste bolsa</th>
-              <th className="px-2 py-1.5">Reajuste semestral</th>
-              <th className="px-2 py-1.5">Anual {rules.annualMinPct}%</th>
-              <th className="px-2 py-1.5">Ajustes totais {rules.annualMinPct}%</th>
-              <th className="px-2 py-1.5">Mensalidade {rules.annualMinPct}%</th>
-              <th className="px-2 py-1.5">Anual {rules.annualMaxPct}%</th>
-              <th className="px-2 py-1.5">Ajustes totais {rules.annualMaxPct}%</th>
-              <th className="px-2 py-1.5">Mensalidade {rules.annualMaxPct}%</th>
-              <th className="px-2 py-1.5">Diferença/mês</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {pricing.projection.map((r) => (
-              <tr key={r.index} className="[&>td]:border-r [&>td]:border-slate-200 [&>td]:px-2 [&>td]:py-1.5">
-                <td className="text-left">{r.index}</td>
-                <td className="text-left">{r.term}</td>
-                <td>{percent(r.scholarshipPct)}</td>
-                <td>{percent(r.scholarshipAdjustPct)}</td>
-                <td>{percent(r.semesterReadjustPct)}</td>
-                <td>{percent(r.annualMinPct)}</td>
-                <td>{percent(r.totalMinPct)}</td>
-                <td className="font-semibold text-[#1d63c9]">{money(r.monthlyMin)}</td>
-                <td>{percent(r.annualMaxPct)}</td>
-                <td>{percent(r.totalMaxPct)}</td>
-                <td className="font-semibold text-[#1d63c9]">{money(r.monthlyMax)}</td>
-                <td>{r.differencePerMonth === null ? "-" : money(r.differencePerMonth)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ProjectionTable doc={doc} />
 
       <h2 className="mt-6 text-lg font-bold">Produtos ou serviços</h2>
       <div className="mt-2 grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 border-b pb-2 text-xs uppercase tracking-wider text-slate-500">

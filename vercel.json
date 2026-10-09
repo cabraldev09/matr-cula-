@@ -1,0 +1,35 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": [
+    "gru1"
+  ],
+  "services": {
+    "web": {
+      "root": "web",
+      "framework": "nextjs",
+      "buildCommand": "npm run vercel-build"
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/retention",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/follow-ups/morning",
+      "schedule": "0 12 * * 1-5"
+    },
+    {
+      "path": "/api/cron/follow-ups/afternoon",
+      "schedule": "0 18 * * 1-5"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "web"
+      }
+    }
+  ]
+}
