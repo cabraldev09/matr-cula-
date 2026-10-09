@@ -36,7 +36,8 @@ test("WhatsApp message becomes a lead, gets a scholarship proposal and pays the 
     await page.goto("/crm/cursos");
     await page.getByRole("button", { name: "Importar planilha" }).click();
     await page.getByRole("dialog").getByRole("textbox").last().fill("Biomedicina;Semipresencial - Graduação;8;1014,70;306,75\nNutrição;Semipresencial - Graduação;8;1073,80;284,93");
-    await page.getByRole("button", { name: "Importar", exact: true }).click();
+    await expect(page.getByText("2 linha(s) prontas")).toBeVisible();
+    await page.getByRole("button", { name: /^Importar 2$/ }).click();
     await expect(page.getByText("69,77%")).toBeVisible();
 
     // Mensagem no WhatsApp (canal de teste) cria o lead na hora, com o curso reconhecido.
